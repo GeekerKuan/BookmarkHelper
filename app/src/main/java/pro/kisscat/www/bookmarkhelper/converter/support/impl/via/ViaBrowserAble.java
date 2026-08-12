@@ -1,17 +1,14 @@
 package pro.kisscat.www.bookmarkhelper.converter.support.impl.via;
 
 import android.content.Context;
-import android.support.v4.content.ContextCompat;
+import androidx.core.content.ContextCompat;
 
 import java.util.List;
 
 import pro.kisscat.www.bookmarkhelper.R;
 import pro.kisscat.www.bookmarkhelper.converter.support.BasicBrowser;
-import pro.kisscat.www.bookmarkhelper.converter.support.impl.via.impl.ViaStage1Browser;
 import pro.kisscat.www.bookmarkhelper.converter.support.impl.via.impl.ViaStage2Browser;
-import pro.kisscat.www.bookmarkhelper.entry.app.App;
 import pro.kisscat.www.bookmarkhelper.entry.app.Bookmark;
-import pro.kisscat.www.bookmarkhelper.util.appList.AppListUtil;
 
 /**
  * Created with Android Studio.
@@ -27,28 +24,10 @@ public class ViaBrowserAble extends BasicBrowser {
     protected List<Bookmark> bookmarks;
 
     public static ViaBrowserAble fetchViaBrowser() {
-        App via = AppListUtil.getAppInfo(ViaBrowserAble.packageName);
-        ViaBrowserAble viaBrowserable = null;
-        if (via != null) {
-            viaBrowserable = ViaBrowserAble.fetchViaBrowser(via.getVersionName(), via.getVersionCode());
-        }
-        if (viaBrowserable == null) {
-            viaBrowserable = ViaBrowserAble.chooseDefault();
-        }
-        return viaBrowserable;
-    }
-
-    private static ViaBrowserAble fetchViaBrowser(String versionName, long versionCode) {
-        if (versionCode >= ViaStage2Browser.minVersionCode && versionName != null && !versionName.isEmpty()) {
-            return new ViaStage2Browser();
-        } else {
-            return new ViaStage1Browser();
-        }
-    }
-
-
-    private static ViaBrowserAble chooseDefault() {
-        return fetchViaBrowser(null, 0);
+        // This Android 12+ branch intentionally supports only Via's SQLite format.
+        // The pre-2016 text format depended on shared-storage root copies and is
+        // deliberately unreachable from the modern sync rule.
+        return new ViaStage2Browser();
     }
 
     public String getPackageName() {

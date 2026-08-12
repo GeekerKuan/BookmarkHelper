@@ -1,15 +1,16 @@
 package pro.kisscat.www.bookmarkhelper.entry.file;
 
-import android.support.annotation.NonNull;
-import android.support.compat.BuildConfig;
+import androidx.annotation.NonNull;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Locale;
 
 import lombok.Getter;
 import lombok.Setter;
+import pro.kisscat.www.bookmarkhelper.BuildConfig;
 
 /**
  * Created with Android Studio.
@@ -64,7 +65,8 @@ public class File implements Comparable<File> {
         String timeStr = property[length - 2];
         if (dateStr != null && !dateStr.isEmpty() && timeStr != null && !timeStr.isEmpty()) {
             String dateTimeStr = dateStr + " " + timeStr;
-            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+            SimpleDateFormat simpleDateFormat =
+                    new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US);
             try {
                 this.changeTime = simpleDateFormat.parse(dateTimeStr);
             } catch (ParseException e) {

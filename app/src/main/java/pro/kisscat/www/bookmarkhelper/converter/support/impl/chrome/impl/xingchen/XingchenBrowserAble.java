@@ -58,11 +58,11 @@ public class XingchenBrowserAble extends ChromeBrowserAble {
             cursor = sqLiteDatabase.query(false, tableName, columns, null, null, null, null, null, null);
             if (cursor != null && cursor.getCount() > 0) {
                 while (cursor.moveToNext()) {
-                    long timestamp = cursor.getLong(cursor.getColumnIndex("timestamp"));
+                    long timestamp = cursor.getLong(cursor.getColumnIndexOrThrow("timestamp"));
                     if (timestamp > 0) {
                         Bookmark item = new Bookmark();
-                        item.setTitle(cursor.getString(cursor.getColumnIndex("title")));
-                        item.setUrl(cursor.getString(cursor.getColumnIndex("url")));
+                        item.setTitle(cursor.getString(cursor.getColumnIndexOrThrow("title")));
+                        item.setUrl(cursor.getString(cursor.getColumnIndexOrThrow("url")));
                         result.add(item);
                     }
                 }

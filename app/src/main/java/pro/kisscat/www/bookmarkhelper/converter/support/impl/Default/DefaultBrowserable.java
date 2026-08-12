@@ -119,11 +119,11 @@ public class DefaultBrowserAble extends BasicBrowser {
         List<DefaultBookmark> result = new LinkedList<>();
         while (cursor.moveToNext()) {
             DefaultBookmark item = new DefaultBookmark();
-            item.setTitle(cursor.getString(cursor.getColumnIndex("title")));
-            item.setUrl(cursor.getString(cursor.getColumnIndex("url")));
-            item.setId(cursor.getInt(cursor.getColumnIndex("_id")));
-            item.setIsFolder(cursor.getInt(cursor.getColumnIndex("folder")));
-            item.setParent(cursor.getInt(cursor.getColumnIndex("parent")));
+            item.setTitle(cursor.getString(cursor.getColumnIndexOrThrow("title")));
+            item.setUrl(cursor.getString(cursor.getColumnIndexOrThrow("url")));
+            item.setId(cursor.getInt(cursor.getColumnIndexOrThrow("_id")));
+            item.setIsFolder(cursor.getInt(cursor.getColumnIndexOrThrow("folder")));
+            item.setParent(cursor.getInt(cursor.getColumnIndexOrThrow("parent")));
             result.add(item);
         }
         return result;

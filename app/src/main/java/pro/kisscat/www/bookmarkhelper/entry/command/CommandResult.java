@@ -1,6 +1,7 @@
 package pro.kisscat.www.bookmarkhelper.entry.command;
 
 import java.util.List;
+import java.util.Locale;
 
 import lombok.Getter;
 import pro.kisscat.www.bookmarkhelper.util.json.JsonUtil;
@@ -63,7 +64,7 @@ public class CommandResult {
             if (item == null || item.isEmpty()) {
                 continue;
             }
-            if (!item.toUpperCase().startsWith("WARNING:")) {
+            if (!item.toUpperCase(Locale.ROOT).startsWith("WARNING:")) {
                 return false;
             }
         }

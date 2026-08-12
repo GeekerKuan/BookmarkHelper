@@ -187,11 +187,11 @@ public class UCBrowserAble extends BasicBrowser {
         List<UCBookmark> result = new LinkedList<>();
         while (cursor.moveToNext()) {
             UCBookmark item = new UCBookmark();
-            item.setTitle(cursor.getString(cursor.getColumnIndex("title")));
-            item.setUrl(cursor.getString(cursor.getColumnIndex("url")));
-            item.setLuid(cursor.getLong(cursor.getColumnIndex("luid")));
-            item.setParent_id(cursor.getLong(cursor.getColumnIndex("parent_id")));
-            item.setIsFolder(cursor.getInt(cursor.getColumnIndex("folder")));
+            item.setTitle(cursor.getString(cursor.getColumnIndexOrThrow("title")));
+            item.setUrl(cursor.getString(cursor.getColumnIndexOrThrow("url")));
+            item.setLuid(cursor.getLong(cursor.getColumnIndexOrThrow("luid")));
+            item.setParent_id(cursor.getLong(cursor.getColumnIndexOrThrow("parent_id")));
+            item.setIsFolder(cursor.getInt(cursor.getColumnIndexOrThrow("folder")));
             result.add(item);
         }
         return result;

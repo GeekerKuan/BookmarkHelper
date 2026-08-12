@@ -2,8 +2,6 @@ package pro.kisscat.www.bookmarkhelper.entry.app;
 
 import android.graphics.drawable.Drawable;
 
-import com.alibaba.fastjson.annotation.JSONField;
-
 import lombok.Data;
 
 /**
@@ -20,6 +18,5 @@ public class App {
     public String packageName = "";
     public String versionName = "";
     public long versionCode = 0;
-    @JSONField(serialize = false)
     public transient Drawable icon;
 }

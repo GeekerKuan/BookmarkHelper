@@ -20,16 +20,25 @@ public class Result {
     @Getter
     private int successCount = 0;
     @Setter
-    @Getter
     private String errorMsg;
     @Setter
-    @Getter
     private String warnMsg;
     @Setter
-    @Getter
     private String successMsg;
 
-    public Result() {//空的构造方法不能删除，fastjson需要用到
+    public String getErrorMsg() {
+        return errorMsg;
+    }
+
+    public String getWarnMsg() {
+        return warnMsg;
+    }
+
+    public String getSuccessMsg() {
+        return successMsg;
+    }
+
+    public Result() {
 
     }
 

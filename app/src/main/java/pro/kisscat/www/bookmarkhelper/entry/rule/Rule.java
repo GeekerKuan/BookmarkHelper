@@ -23,14 +23,26 @@ public class Rule {
     @Getter
     private int id;
     @Setter
-    @Getter
     private BasicBrowser source;
     @Setter
-    @Getter
     private BasicBrowser target;
-    @Setter
-    @Getter
     private boolean canUse;
+
+    public BasicBrowser getSource() {
+        return source;
+    }
+
+    public BasicBrowser getTarget() {
+        return target;
+    }
+
+    public boolean isCanUse() {
+        return canUse;
+    }
+
+    public void setCanUse(boolean canUse) {
+        this.canUse = canUse;
+    }
 
     public Rule(int id, Context context, BasicBrowser source, BasicBrowser target) {
         boolean sourceInstalled = false, targetInstalled = false;

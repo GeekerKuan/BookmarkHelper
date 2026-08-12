@@ -3,7 +3,7 @@ package pro.kisscat.www.bookmarkhelper.converter.support.impl;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.support.v4.content.ContextCompat;
+import androidx.core.content.ContextCompat;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -175,11 +175,11 @@ public class OupengBrowser extends BasicBrowser {
         List<OupengBookmark> result = new LinkedList<>();
         while (cursor.moveToNext()) {
             OupengBookmark item = new OupengBookmark();
-            item.setTitle(cursor.getString(cursor.getColumnIndex("title")));
-            item.setUrl(cursor.getString(cursor.getColumnIndex("url")));
-            item.setIsfolder(cursor.getInt(cursor.getColumnIndex("isfolder")));
-            item.setId(cursor.getLong(cursor.getColumnIndex("_id")));
-            item.setParent(cursor.getLong(cursor.getColumnIndex("parent")));
+            item.setTitle(cursor.getString(cursor.getColumnIndexOrThrow("title")));
+            item.setUrl(cursor.getString(cursor.getColumnIndexOrThrow("url")));
+            item.setIsfolder(cursor.getInt(cursor.getColumnIndexOrThrow("isfolder")));
+            item.setId(cursor.getLong(cursor.getColumnIndexOrThrow("_id")));
+            item.setParent(cursor.getLong(cursor.getColumnIndexOrThrow("parent")));
             result.add(item);
         }
         return result;

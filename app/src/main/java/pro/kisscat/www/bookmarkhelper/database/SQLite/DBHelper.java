@@ -36,24 +36,25 @@ public class DBHelper {
         } catch (Exception e) {
             LogHelper.w("first open " + (isReadOnly ? "read-only" : "read-write") + " database error,will try agin later.");
             LogHelper.e(e);
-            e.printStackTrace();
             try {
                 int sleep = 50 + RandomUtil.nextInt(50);
                 LogHelper.v("sleep:" + sleep);
                 Thread.sleep(sleep);
             } catch (InterruptedException e1) {
+                Thread.currentThread().interrupt();
                 LogHelper.e("got a interruptedException.");
                 LogHelper.e(e1);
-                e1.printStackTrace();
-                return null;
+                throw new IllegalStateException("数据库重试被中断", e1);
             }
             LogHelper.v("sleep completed,try agin begining.");
             try {
-                return SQLiteDatabase.openDatabase(dbFilePath, null, SQLiteDatabase.OPEN_READWRITE);
+                return SQLiteDatabase.openDatabase(
+                        dbFilePath,
+                        null,
+                        isReadOnly ? SQLiteDatabase.OPEN_READONLY : SQLiteDatabase.OPEN_READWRITE);
             } catch (Exception e1) {
-                LogHelper.e("second open " + (isReadOnly ? "read-only" : "read-write") + " database error,will throw exception." + e1.getMessage());
+                LogHelper.e("second open " + (isReadOnly ? "read-only" : "read-write") + " database error,will throw exception.");
                 LogHelper.e(e1);
-                e1.printStackTrace();
                 throw e1;
             }
         }
@@ -71,14 +72,19 @@ public class DBHelper {
             LogHelper.e("checkTableExist.tableName is isEmpty.");
             return false;
         }
-        Cursor cursor = sqLiteDatabase.rawQuery("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='" + tableName + "'", null);
-        if (cursor.moveToNext()) {
-            int count = cursor.getInt(0);
-            if (count > 0) {
-                return true;
+        Cursor cursor = null;
+        try {
+            cursor = sqLiteDatabase.rawQuery(
+                    "SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?",
+                    new String[]{tableName});
+            if (cursor.moveToNext()) {
+                return cursor.getInt(0) > 0;
+            }
+            return false;
+        } finally {
+            if (cursor != null) {
+                cursor.close();
             }
         }
-        cursor.close();
-        return false;
     }
 }

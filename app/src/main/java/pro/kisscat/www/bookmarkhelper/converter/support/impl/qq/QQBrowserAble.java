@@ -179,8 +179,8 @@ public class QQBrowserAble extends BasicBrowser {
     private void parseBookmarkWithoutFolder(Cursor cursor, List<Bookmark> result) {
         while (cursor.moveToNext()) {
             Bookmark item = new Bookmark();
-            item.setTitle(cursor.getString(cursor.getColumnIndex("title")));
-            item.setUrl(cursor.getString(cursor.getColumnIndex("url")));
+            item.setTitle(cursor.getString(cursor.getColumnIndexOrThrow("title")));
+            item.setUrl(cursor.getString(cursor.getColumnIndexOrThrow("url")));
             item.setFolder("主页");
             result.add(item);
         }
@@ -233,11 +233,11 @@ public class QQBrowserAble extends BasicBrowser {
         List<QQBookmark> result = new LinkedList<>();
         while (cursor.moveToNext()) {
             QQBookmark item = new QQBookmark();
-            item.setTitle(cursor.getString(cursor.getColumnIndex("title")));
-            item.setUrl(cursor.getString(cursor.getColumnIndex("url")));
-            item.setFolder(cursor.getInt(cursor.getColumnIndex("folder")) + "");
-            item.setParent_uuid(cursor.getLong(cursor.getColumnIndex("parent_uuid")));
-            item.setUuid(cursor.getLong(cursor.getColumnIndex("uuid")));
+            item.setTitle(cursor.getString(cursor.getColumnIndexOrThrow("title")));
+            item.setUrl(cursor.getString(cursor.getColumnIndexOrThrow("url")));
+            item.setFolder(cursor.getInt(cursor.getColumnIndexOrThrow("folder")) + "");
+            item.setParent_uuid(cursor.getLong(cursor.getColumnIndexOrThrow("parent_uuid")));
+            item.setUuid(cursor.getLong(cursor.getColumnIndexOrThrow("uuid")));
             result.add(item);
         }
         return result;

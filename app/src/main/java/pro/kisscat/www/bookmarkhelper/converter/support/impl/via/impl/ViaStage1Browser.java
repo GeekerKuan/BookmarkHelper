@@ -77,19 +77,17 @@ public class ViaStage1Browser extends ViaBrowserAble {
             bookmarks = new LinkedList<>();
             fetchValidBookmarks(bookmarks, list);
         } catch (ConverterException converterException) {
-            converterException.printStackTrace();
             LogHelper.e(converterException);
             throw converterException;
         } catch (Exception e) {
             LogHelper.e(e);
-            e.printStackTrace();
             throw new ConverterException(ContextUtil.buildReadBookmarksErrorMessage(this.getName()));
         } finally {
             if (reader != null) {
                 try {
                     reader.close();
                 } catch (IOException e1) {
-                    LogHelper.e(e1.getMessage());
+                    LogHelper.e(e1);
                 }
             }
             LogHelper.v(TAG + ":读取书签数据结束");
@@ -140,19 +138,17 @@ public class ViaStage1Browser extends ViaBrowserAble {
             InternalStorageUtil.deleteFile(cleanFilePath, this.getName());
             successCount = increment.size();
         } catch (ConverterException converterException) {
-            converterException.printStackTrace();
-            LogHelper.e(converterException.getMessage());
+            LogHelper.e(converterException);
             throw converterException;
         } catch (Exception e) {
-            e.printStackTrace();
-            LogHelper.e(e.getMessage());
+            LogHelper.e(e);
             throw new ConverterException(ContextUtil.buildAppendBookmarksErrorMessage(this.getName()));
         } finally {
             if (writer != null) {
                 try {
                     writer.close();
                 } catch (IOException e1) {
-                    LogHelper.e(e1.getMessage());
+                        LogHelper.e(e1);
                 }
             }
             this.bookmarks = null;
