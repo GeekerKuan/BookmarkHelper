@@ -22,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
@@ -93,7 +92,6 @@ class AppInfoActivity : ComponentActivity() {
                         UiPreferences.blurEnabled(this),
                         ::finishSystemPage,
                         ::tapVersion,
-                        ::openChangelog,
                         ::openDeveloperOptions,
                         ::openProject,
                         message,
@@ -104,7 +102,6 @@ class AppInfoActivity : ComponentActivity() {
                         developerVisible,
                         ::finishSystemPage,
                         ::tapVersion,
-                        ::openChangelog,
                         ::openDeveloperOptions,
                         ::openProject,
                     )
@@ -146,8 +143,6 @@ class AppInfoActivity : ComponentActivity() {
         }
     }
 
-    private fun openChangelog() = openSystemPage(Intent(this, ChangelogActivity::class.java))
-
     private fun openDeveloperOptions() =
         openSystemPage(Intent(this, DeveloperOptionsActivity::class.java))
 
@@ -166,7 +161,6 @@ private fun MiuixAppInfo(
     blurEnabled: Boolean,
     back: () -> Unit,
     tapVersion: () -> Unit,
-    changelog: () -> Unit,
     developer: () -> Unit,
     project: () -> Unit,
     message: String?,
@@ -210,22 +204,14 @@ private fun MiuixAppInfo(
                         )
                     }
                 }
-                item {
+                if (developerVisible) item {
                     MiuixCard {
                         ArrowPreference(
-                            title = "版本更新日志",
-                            summary = "从原项目 0.0.1 到当前测试版",
-                            startAction = { MiuixIcon(Icons.Default.Refresh, null) },
-                            onClick = changelog,
+                            title = "开发者选项",
+                            summary = "诊断日志、实验功能与调试数据",
+                            startAction = { MiuixIcon(Icons.Default.Build, null) },
+                            onClick = developer,
                         )
-                        if (developerVisible) {
-                            ArrowPreference(
-                                title = "开发者选项",
-                                summary = "诊断日志、实验功能与调试数据",
-                                startAction = { MiuixIcon(Icons.Default.Build, null) },
-                                onClick = developer,
-                            )
-                        }
                     }
                 }
                 item {
@@ -264,7 +250,6 @@ private fun MaterialAppInfo(
     developerVisible: Boolean,
     back: () -> Unit,
     tapVersion: () -> Unit,
-    changelog: () -> Unit,
     developer: () -> Unit,
     project: () -> Unit,
 ) {
@@ -293,7 +278,6 @@ private fun MaterialAppInfo(
                 )
             } }
             item { Card(Modifier.fillMaxWidth()) {
-                InfoRow("版本更新日志", "从原项目 0.0.1 到当前测试版", changelog)
                 if (developerVisible) InfoRow("开发者选项", "诊断、实验与调试数据", developer)
                 InfoRow("项目主页", "viceyy/BookmarkHelper", project)
             } }

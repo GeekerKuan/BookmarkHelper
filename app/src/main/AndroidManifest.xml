@@ -67,10 +67,6 @@
             android:exported="false" />
 
         <activity
-            android:name=".activity.ChangelogActivity"
-            android:exported="false" />
-
-        <activity
             android:name=".activity.DataManagerActivity"
             android:exported="false" />
 
