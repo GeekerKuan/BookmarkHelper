@@ -115,6 +115,9 @@ fun BookmarkHelperMiuixScreen(state: BookmarkHelperUiState, actions: BookmarkHel
         initialPage = state.selectedPage.index,
         pageCount = { MainPage.entries.size },
     )
+    // The visible title and navigation highlight must follow the pager itself. The Activity
+    // state is persisted only after settling and can intentionally lag during a swipe.
+    val visiblePage = MainPage.fromIndex(pagerState.currentPage)
     var programmaticTarget by remember { mutableStateOf<Int?>(null) }
     val currentSelectedPage by rememberUpdatedState(state.selectedPage)
     val currentActions by rememberUpdatedState(actions)
@@ -144,7 +147,7 @@ fun BookmarkHelperMiuixScreen(state: BookmarkHelperUiState, actions: BookmarkHel
         topBar = {
             MiuixBlurredBar(blurBackdrop) {
                 TopAppBar(
-                    title = miuixPageTitle(state.selectedPage),
+                    title = miuixPageTitle(visiblePage),
                     color = barColor,
                     scrollBehavior = scrollBehavior,
                 )
@@ -159,14 +162,14 @@ fun BookmarkHelperMiuixScreen(state: BookmarkHelperUiState, actions: BookmarkHel
                             bottom = 10.dp + WindowInsets.navigationBars
                                 .asPaddingValues().calculateBottomPadding()
                         ),
-                    selectedIndex = state.selectedPage.index,
+                    selectedIndex = visiblePage.index,
                     onSelected = { actions.selectPage(MainPage.fromIndex(it)) },
                     backdrop = contentBackdrop,
                     tabsCount = destinations.size,
                     isBlurEnabled = state.glassEnabled && blurBackdrop != null && Build.VERSION.SDK_INT >= 33,
                 ) {
                     destinations.forEach { destination ->
-                        val selected = state.selectedPage == destination.page
+                        val selected = visiblePage == destination.page
                         FloatingBottomBarItem(
                             onClick = { actions.selectPage(destination.page) },
                             modifier = Modifier.defaultMinSize(minWidth = 76.dp),
@@ -201,7 +204,7 @@ fun BookmarkHelperMiuixScreen(state: BookmarkHelperUiState, actions: BookmarkHel
                             ),
                     ) {
                         destinations.forEach { destination ->
-                            val selected = state.selectedPage == destination.page
+                            val selected = visiblePage == destination.page
                             Column(
                                 Modifier.weight(1f).clickable {
                                     actions.selectPage(destination.page)

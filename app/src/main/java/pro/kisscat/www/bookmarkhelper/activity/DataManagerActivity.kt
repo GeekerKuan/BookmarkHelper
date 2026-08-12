@@ -28,6 +28,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -62,6 +64,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -89,6 +92,7 @@ import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card as MiuixCard
 import top.yukonga.miuix.kmp.basic.CardDefaults as MiuixCardDefaults
+import top.yukonga.miuix.kmp.basic.Checkbox as MiuixCheckbox
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 import top.yukonga.miuix.kmp.basic.FloatingToolbar
@@ -115,7 +119,6 @@ import top.yukonga.miuix.kmp.icon.extended.Favorites
 import top.yukonga.miuix.kmp.icon.extended.Folder
 import top.yukonga.miuix.kmp.icon.extended.Layers
 import top.yukonga.miuix.kmp.icon.extended.MoveFile
-import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Paste
 import top.yukonga.miuix.kmp.icon.extended.Recent
 import top.yukonga.miuix.kmp.icon.extended.UploadCloud
@@ -299,6 +302,7 @@ private fun DataManagerScreen(
     var search by remember { mutableStateOf("") }
     var historyOffset by remember { mutableIntStateOf(0) }
     var historyJumpGeneration by remember { mutableIntStateOf(0) }
+    var historyJumpOffset by remember { mutableStateOf<Int?>(null) }
     var limit by remember { mutableIntStateOf(100) }
     var page by remember { mutableStateOf(ManagedDataPage(emptyList(), 0, 0, false)) }
     var editing by remember { mutableStateOf<ManagedDataRow?>(null) }
@@ -321,7 +325,6 @@ private fun DataManagerScreen(
                 IntermediateDataRepository.queryBookmarkFolder(folderPath, search, 0, limit, browser)
             } else IntermediateDataRepository.query(kind, search, historyOffset, limit, browser)
         }
-        selected = selected.intersect(page.rows.map { it.ref }.toSet())
     }
 
     val toggle: (IntermediateItemRef) -> Unit = { ref ->
@@ -345,6 +348,17 @@ private fun DataManagerScreen(
         MiuixDataManagerContent(
             kind, page, search, { search = it; historyOffset = 0; limit = 100 }, { limit += 100 },
             { editing = it }, { deleting = it }, selected, toggle, selectGroup,
+            { timestamp ->
+                operationScope.launch {
+                    val dayRefs = withContext(Dispatchers.IO) {
+                        IntermediateDataRepository.historyRefsForLocalDay(timestamp, search, browser)
+                    }
+                    if (dayRefs.isNotEmpty()) {
+                        selectedFolder = null
+                        selected = if (dayRefs.all(selected::contains)) selected - dayRefs else selected + dayRefs
+                    }
+                }
+            },
             clearSelection, { deletingSelection = true },
             { movingSelection = true },
             { bookmarkClipboard = selected; selected = emptySet() },
@@ -375,6 +389,8 @@ private fun DataManagerScreen(
             },
             { timestamp -> historyPickerDate = timestamp },
             historyJumpGeneration,
+            historyJumpOffset,
+            { historyJumpOffset = null },
             browser != null,
             when (kind) {
                 IntermediateItemKind.BOOKMARK -> repositoryState.bookmarkCount > 0
@@ -677,9 +693,10 @@ private fun DataManagerScreen(
                     historyOffset = withContext(Dispatchers.IO) {
                         IntermediateDataRepository.historyOffsetForDate(dayStart, search, browser)
                     }
+                    limit = 100
+                    historyJumpOffset = historyOffset
                     historyJumpGeneration++
                     selected = emptySet()
-                    limit = 100
                 }
             },
         )
@@ -698,6 +715,7 @@ private fun MiuixDataManagerContent(
     selected: Set<IntermediateItemRef>,
     toggle: (IntermediateItemRef) -> Unit,
     selectGroup: (List<ManagedDataRow>) -> Unit,
+    selectHistoryDay: (Long) -> Unit,
     clearSelection: () -> Unit,
     deleteSelection: () -> Unit,
     moveSelection: () -> Unit,
@@ -712,6 +730,8 @@ private fun MiuixDataManagerContent(
     deleteSelectedFolder: () -> Unit,
     requestHistoryDateJump: (Long) -> Unit,
     historyJumpGeneration: Int,
+    historyJumpOffset: Int?,
+    consumeHistoryJump: () -> Unit,
     folderMutationEnabled: Boolean,
     exportAllEnabled: Boolean,
     exportAll: () -> Unit,
@@ -728,6 +748,7 @@ private fun MiuixDataManagerContent(
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberMiuixBlurBackdrop(blurEnabled)
     val barColor = if (backdrop != null) Color.Transparent else MiuixTheme.colorScheme.surface
+    val selectionMode = selected.isNotEmpty() || selectedFolder != null
     LaunchedEffect(listState, page.hasMore, page.rows.size, page.folders.size) {
         snapshotFlow {
             val info = listState.layoutInfo
@@ -738,10 +759,17 @@ private fun MiuixDataManagerContent(
             if (shouldLoad) loadMore()
         }
     }
-    LaunchedEffect(historyJumpGeneration) {
-        if (historyJumpGeneration > 0 && page.rows.isNotEmpty()) {
+    LaunchedEffect(historyJumpGeneration, historyJumpOffset, page.offset, page.rows) {
+        val targetOffset = historyJumpOffset
+        if (
+            historyJumpGeneration > 0 &&
+            targetOffset != null &&
+            page.offset == targetOffset &&
+            page.rows.isNotEmpty()
+        ) {
             // Search and summary occupy the first item; the target date starts immediately after it.
             listState.scrollToItem(1 + page.folders.size)
+            consumeHistoryJump()
         }
     }
     MiuixScaffold(topBar = {
@@ -804,11 +832,19 @@ private fun MiuixDataManagerContent(
                         summary = "${folder.recordCount} 条收藏",
                         startAction = {
                             MiuixIcon(
-                                if (folder.path == selectedFolder) MiuixIcons.Ok else MiuixIcons.Folder,
-                                if (folder.path == selectedFolder) "已选择" else null,
+                                MiuixIcons.Folder,
+                                null,
                             )
                         },
-                        endActions = { MiuixIcon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                        endActions = {
+                            AnimatedSelectionCheckbox(
+                                visible = selectionMode,
+                                checked = folder.path == selectedFolder,
+                            )
+                            if (!selectionMode) {
+                                MiuixIcon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
+                            }
+                        },
                     )
                 }
             }
@@ -828,8 +864,19 @@ private fun MiuixDataManagerContent(
                             MiuixText(section, Modifier.padding(horizontal = 16.dp))
                         }
                         MiuixTextButton(
-                            if (rows.all { it.ref in selected }) "取消全选" else "全选",
-                            { selectGroup(rows) },
+                            if (rows.all { it.ref in selected }) {
+                                if (kind == IntermediateItemKind.HISTORY) "取消当天" else "取消全选"
+                            } else {
+                                if (kind == IntermediateItemKind.HISTORY) "选择当天" else "全选"
+                            },
+                            {
+                                if (kind == IntermediateItemKind.HISTORY) {
+                                    rows.firstNotNullOfOrNull { it.timestampEpochMillis }
+                                        ?.let(selectHistoryDay)
+                                } else {
+                                    selectGroup(rows)
+                                }
+                            },
                         )
                     }
                 }
@@ -868,12 +915,17 @@ private fun MiuixDataManagerContent(
                         startAction = {
                             MiuixIcon(
                                 when {
-                                    row.ref in selected -> MiuixIcons.Ok
                                     kind == IntermediateItemKind.BOOKMARK -> MiuixIcons.Favorites
                                     kind == IntermediateItemKind.HISTORY -> MiuixIcons.Recent
                                     else -> MiuixIcons.Layers
                                 },
-                                if (row.ref in selected) "已选择" else null,
+                                null,
+                            )
+                        },
+                        endActions = {
+                            AnimatedSelectionCheckbox(
+                                visible = selectionMode,
+                                checked = row.ref in selected,
                             )
                         },
                     )
@@ -882,7 +934,7 @@ private fun MiuixDataManagerContent(
             }
             item { androidx.compose.foundation.layout.Spacer(Modifier.size(88.dp)) }
             }
-            val hasSelection = selected.isNotEmpty() || selectedFolder != null
+            val hasSelection = selectionMode
             if (hasSelection || canPaste || createFolder != null || exportAllEnabled) {
                 FloatingToolbar(
                     modifier = Modifier.align(Alignment.BottomStart)
@@ -972,6 +1024,23 @@ private fun ContextToolbarItem(visible: Boolean, content: @Composable () -> Unit
         exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start),
     ) {
         content()
+    }
+}
+
+@Composable
+private fun AnimatedSelectionCheckbox(
+    visible: Boolean,
+    checked: Boolean,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn() + scaleIn(initialScale = 0.72f),
+        exit = fadeOut() + scaleOut(targetScale = 0.72f),
+    ) {
+        MiuixCheckbox(
+            state = if (checked) ToggleableState.On else ToggleableState.Off,
+            onClick = null,
+        )
     }
 }
 

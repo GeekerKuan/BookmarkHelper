@@ -1,5 +1,8 @@
 package pro.kisscat.www.bookmarkhelper.ui.component.miuix
 
+import android.os.Build
+import android.view.HapticFeedbackConstants
+import android.view.SoundEffectConstants
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,9 +27,11 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import java.util.Calendar
+import pro.kisscat.www.bookmarkhelper.ui.UiPreferences
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.NumberPicker
 import top.yukonga.miuix.kmp.basic.Slider
@@ -109,6 +114,20 @@ fun MiuixDatePickerBottomSheet(
     minimumDateMillis: Long? = null,
     maximumDateMillis: Long? = null,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val view = LocalView.current
+    val pickerFeedback: () -> Unit = {
+        if (UiPreferences.hapticsEnabled(context)) {
+            val feedback = if (Build.VERSION.SDK_INT >= 34) {
+                HapticFeedbackConstants.SEGMENT_TICK
+            } else {
+                HapticFeedbackConstants.CLOCK_TICK
+            }
+            // Let HyperOS/the current OEM map the platform constant to its own haptic engine.
+            view.performHapticFeedback(feedback)
+            if (view.isSoundEffectsEnabled) view.playSoundEffect(SoundEffectConstants.CLICK)
+        }
+    }
     val navigationBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val initial = remember(initialDateMillis) { calendarAtStartOfDay(initialDateMillis) }
     val suppliedMinimum = remember(minimumDateMillis) {
@@ -164,27 +183,36 @@ fun MiuixDatePickerBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                NumberPicker(
+                FixedUnitNumberPicker(
                     value = year,
-                    onValueChange = { year = it },
-                    modifier = Modifier.weight(1.3f),
+                    onValueChange = {
+                        if (it != year) pickerFeedback()
+                        year = it
+                    },
+                    unit = "年",
+                    modifier = Modifier.weight(1.35f),
                     range = yearRange,
-                    label = { "${it}年" },
                 )
-                NumberPicker(
+                FixedUnitNumberPicker(
                     value = resolvedMonth,
-                    onValueChange = { month = it },
+                    onValueChange = {
+                        if (it != month) pickerFeedback()
+                        month = it
+                    },
+                    unit = "月",
                     modifier = Modifier.weight(1f),
                     range = monthRange,
-                    label = { "${it}月" },
                     wrapAround = monthRange.first == 1 && monthRange.last == 12,
                 )
-                NumberPicker(
+                FixedUnitNumberPicker(
                     value = resolvedDay,
-                    onValueChange = { day = it },
+                    onValueChange = {
+                        if (it != day) pickerFeedback()
+                        day = it
+                    },
+                    unit = "日",
                     modifier = Modifier.weight(1f),
                     range = dayRange,
-                    label = { "${it}日" },
                     wrapAround = dayRange.first == 1,
                 )
             }
@@ -202,6 +230,31 @@ fun MiuixDatePickerBottomSheet(
                 colors = ButtonDefaults.textButtonColorsPrimary(),
             )
         }
+    }
+}
+
+@Composable
+private fun FixedUnitNumberPicker(
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    unit: String,
+    range: IntRange,
+    modifier: Modifier = Modifier,
+    wrapAround: Boolean = false,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        NumberPicker(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.weight(1f),
+            range = range,
+            label = { it.toString() },
+            wrapAround = wrapAround,
+        )
+        Text(unit)
     }
 }
 
