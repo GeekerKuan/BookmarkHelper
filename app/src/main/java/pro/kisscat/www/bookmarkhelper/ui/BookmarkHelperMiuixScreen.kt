@@ -277,6 +277,7 @@ private fun MiuixHome(state: BookmarkHelperUiState, actions: BookmarkHelperActio
         contentPadding = PaddingValues(top = topPadding),
         overscrollEffect = null,
     ) {
+        item { MiuixPageLead("管理并迁移不同浏览器中的数据。") }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 MiuixEnvironmentCard(
@@ -291,7 +292,7 @@ private fun MiuixHome(state: BookmarkHelperUiState, actions: BookmarkHelperActio
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 showIndication = true,
-                pressFeedbackType = PressFeedbackType.Sink,
+                pressFeedbackType = PressFeedbackType.Tilt,
                 onClick = { /* Information-only card. */ },
             ) {
                 BasicComponent(
@@ -351,7 +352,7 @@ private fun MiuixEnvironmentCard(
         modifier = modifier,
         colors = CardDefaults.defaultColors(color = background),
         showIndication = true,
-        pressFeedbackType = PressFeedbackType.Sink,
+        pressFeedbackType = PressFeedbackType.Tilt,
         onClick = { /* Status-only card: preserve press depth without re-running probes. */ },
     ) {
         Box(Modifier.fillMaxWidth().height(152.dp)) {
@@ -390,14 +391,14 @@ private fun MiuixHomeNavigationCard(
     Card(
         modifier = modifier,
         showIndication = true,
-        pressFeedbackType = PressFeedbackType.Sink,
+        pressFeedbackType = PressFeedbackType.Tilt,
         onClick = onClick,
     ) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(icon, null, tint = MiuixTheme.colorScheme.primary)
-            Text(title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-            Text(summary, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-        }
+        BasicComponent(
+            title = title,
+            summary = summary,
+            startAction = { Icon(icon, null) },
+        )
     }
 }
 
@@ -410,10 +411,7 @@ private fun MiuixTransfer(state: BookmarkHelperUiState, actions: BookmarkHelperA
         overscrollEffect = null,
     ) {
         item {
-            Text(
-                "在数据管理与浏览器之间安全传输收藏、历史记录和标签页。",
-                modifier = Modifier.padding(horizontal = 8.dp),
-            )
+            MiuixPageLead("在数据管理与浏览器之间安全传输收藏、历史记录和标签页。")
         }
         item {
             AnimatedVisibility(
@@ -515,6 +513,7 @@ private fun MiuixSettings(state: BookmarkHelperUiState, actions: BookmarkHelperA
         contentPadding = PaddingValues(top = topPadding),
         overscrollEffect = null,
     ) {
+        item { MiuixPageLead("调整界面、启动页面与应用选项。") }
         item {
             Card {
                 ArrowPreference(
@@ -544,6 +543,16 @@ private fun MiuixSettings(state: BookmarkHelperUiState, actions: BookmarkHelperA
             }
         }
         item { Spacer(Modifier.height(132.dp)) }
+    }
+}
+
+@Composable
+internal fun MiuixPageLead(text: String) {
+    Box(
+        modifier = Modifier.fillMaxWidth().height(24.dp).padding(horizontal = 8.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Text(text, maxLines = 1)
     }
 }
 

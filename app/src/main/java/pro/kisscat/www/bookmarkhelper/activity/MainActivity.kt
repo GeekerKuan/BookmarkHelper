@@ -72,12 +72,15 @@ class MainActivity : ComponentActivity() {
                 intermediateData = intermediateData,
             )
             if (state.selectedPage != MainPage.HOME) {
-                BindInternalBack(state.predictiveBackEnabled, state.predictiveBackMaxProgress) {
+                BindMiuixPagerBack(
+                    enabled = true,
+                    predictiveBackEnabled = state.predictiveBackEnabled,
+                ) {
                     performTick()
                     uiState = uiState.copy(selectedPage = MainPage.HOME)
                 }
             } else {
-                BindSystemBack(state.predictiveBackEnabled, state.predictiveBackMaxProgress)
+                BindSystemBack(state.predictiveBackEnabled)
             }
             val systemDensity = LocalDensity.current
             val scaledDensity = Density(
@@ -160,7 +163,6 @@ class MainActivity : ComponentActivity() {
             blurEnabled = UiPreferences.blurEnabled(this),
             hapticsEnabled = UiPreferences.hapticsEnabled(this),
             predictiveBackEnabled = UiPreferences.predictiveBackEnabled(this),
-            predictiveBackMaxProgress = UiPreferences.predictiveBackMaxProgress(this),
             transitionsEnabled = UiPreferences.transitionsEnabled(this),
             floatingBarEnabled = UiPreferences.floatingBarEnabled(this),
             pageScale = UiPreferences.pageScale(this),
@@ -178,7 +180,6 @@ class MainActivity : ComponentActivity() {
             blurEnabled = UiPreferences.blurEnabled(this),
             hapticsEnabled = UiPreferences.hapticsEnabled(this),
             predictiveBackEnabled = UiPreferences.predictiveBackEnabled(this),
-            predictiveBackMaxProgress = UiPreferences.predictiveBackMaxProgress(this),
             transitionsEnabled = UiPreferences.transitionsEnabled(this),
             floatingBarEnabled = UiPreferences.floatingBarEnabled(this),
             pageScale = UiPreferences.pageScale(this),
