@@ -12,7 +12,6 @@ object UiPreferences {
     private const val BLUR = "enable_blur"
     private const val FLOATING_BAR = "enable_floating_bottom_bar"
     private const val PAGE_SCALE = "page_scale"
-    private const val DEVELOPER_OPTIONS = "developer_options"
     private const val HAPTICS = "system_haptics"
     private const val TRANSITIONS = "system_transition_animations"
     private const val PREDICTIVE_BACK = "predictive_back"
@@ -31,7 +30,6 @@ object UiPreferences {
     fun blurEnabled(context: Context) = preferences(context).getBoolean(BLUR, true)
     fun floatingBarEnabled(context: Context) = preferences(context).getBoolean(FLOATING_BAR, true)
     fun pageScale(context: Context) = preferences(context).getFloat(PAGE_SCALE, 1f).coerceIn(.85f, 1.15f)
-    fun developerOptionsEnabled(context: Context) = preferences(context).getBoolean(DEVELOPER_OPTIONS, false)
     fun hapticsEnabled(context: Context) = preferences(context).getBoolean(HAPTICS, true)
     fun transitionsEnabled(context: Context) = preferences(context).getBoolean(TRANSITIONS, true)
     fun predictiveBackEnabled(context: Context) = preferences(context).getBoolean(PREDICTIVE_BACK, true)
@@ -55,8 +53,6 @@ object UiPreferences {
         preferences(context).edit().putBoolean(FLOATING_BAR, value).apply()
     fun setPageScale(context: Context, value: Float) =
         preferences(context).edit().putFloat(PAGE_SCALE, value.coerceIn(.85f, 1.15f)).apply()
-    fun setDeveloperOptionsEnabled(context: Context, value: Boolean) =
-        preferences(context).edit().putBoolean(DEVELOPER_OPTIONS, value).apply()
     fun setHapticsEnabled(context: Context, value: Boolean) =
         preferences(context).edit().putBoolean(HAPTICS, value).apply()
     fun setTransitionsEnabled(context: Context, value: Boolean) =

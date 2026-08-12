@@ -33,6 +33,7 @@ import pro.kisscat.www.bookmarkhelper.ui.AppHapticProvider
 import pro.kisscat.www.bookmarkhelper.ui.MiuixBookmarkTheme
 import pro.kisscat.www.bookmarkhelper.ui.UiPreferences
 import pro.kisscat.www.bookmarkhelper.ui.component.miuix.MiuixBlurredBar
+import pro.kisscat.www.bookmarkhelper.ui.component.miuix.MiuixDialogAdvancedMaterial
 import pro.kisscat.www.bookmarkhelper.ui.component.miuix.rememberMiuixBlurBackdrop
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
@@ -95,6 +96,7 @@ class DataBackupRestoreActivity : ComponentActivity() {
                     )
                     message?.let { text ->
                         WindowDialog(show = true, onDismissRequest = { message = null }) {
+                            MiuixDialogAdvancedMaterial()
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Text(text)
                                 TextButton(
@@ -107,6 +109,7 @@ class DataBackupRestoreActivity : ComponentActivity() {
                     }
                     if (confirmRestore) {
                         WindowDialog(show = true, onDismissRequest = { confirmRestore = false }) {
+                            MiuixDialogAdvancedMaterial()
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Text("恢复备份会替换当前数据管理中的全部收藏、历史记录、标签页和文件夹。浏览器内的数据不会被修改。")
                                 TextButton(

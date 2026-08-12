@@ -34,7 +34,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -51,6 +50,7 @@ import pro.kisscat.www.bookmarkhelper.ui.MiuixBookmarkTheme
 import pro.kisscat.www.bookmarkhelper.ui.UiMode
 import pro.kisscat.www.bookmarkhelper.ui.UiPreferences
 import pro.kisscat.www.bookmarkhelper.ui.component.miuix.MiuixBlurredBar
+import pro.kisscat.www.bookmarkhelper.ui.component.miuix.MiuixDialogAdvancedMaterial
 import pro.kisscat.www.bookmarkhelper.ui.component.miuix.rememberMiuixBlurBackdrop
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card as MiuixCard
@@ -63,20 +63,16 @@ import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import top.yukonga.miuix.kmp.window.WindowDialog
 
 class AppInfoActivity : ComponentActivity() {
-    private var versionTaps by mutableIntStateOf(0)
-    private var developerVisible by mutableStateOf(false)
     private var message by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        developerVisible = UiPreferences.developerOptionsEnabled(this)
         setContent {
             BindSystemBack(UiPreferences.predictiveBackEnabled(this))
             val uiMode = UiPreferences.uiMode(this)
@@ -88,10 +84,8 @@ class AppInfoActivity : ComponentActivity() {
             val content: @Composable () -> Unit = {
                 if (uiMode == UiMode.MIUIX) {
                     MiuixAppInfo(
-                        developerVisible,
                         UiPreferences.blurEnabled(this),
                         ::finishSystemPage,
-                        ::tapVersion,
                         ::openDeveloperOptions,
                         ::openProject,
                         message,
@@ -99,9 +93,7 @@ class AppInfoActivity : ComponentActivity() {
                     )
                 } else {
                     MaterialAppInfo(
-                        developerVisible,
                         ::finishSystemPage,
-                        ::tapVersion,
                         ::openDeveloperOptions,
                         ::openProject,
                     )
@@ -127,22 +119,6 @@ class AppInfoActivity : ComponentActivity() {
         }
     }
 
-    private fun tapVersion() {
-        if (developerVisible) {
-            message = "开发者选项已经开启。"
-            return
-        }
-        versionTaps++
-        val remaining = 7 - versionTaps
-        if (remaining <= 0) {
-            UiPreferences.setDeveloperOptionsEnabled(this, true)
-            developerVisible = true
-            message = "开发者选项已开启。"
-        } else if (remaining <= 3) {
-            message = "再点击 $remaining 次即可开启开发者选项。"
-        }
-    }
-
     private fun openDeveloperOptions() =
         openSystemPage(Intent(this, DeveloperOptionsActivity::class.java))
 
@@ -157,10 +133,8 @@ class AppInfoActivity : ComponentActivity() {
 
 @Composable
 private fun MiuixAppInfo(
-    developerVisible: Boolean,
     blurEnabled: Boolean,
     back: () -> Unit,
-    tapVersion: () -> Unit,
     developer: () -> Unit,
     project: () -> Unit,
     message: String?,
@@ -193,9 +167,6 @@ private fun MiuixAppInfo(
             ) {
                 item {
                     MiuixCard(
-                        onClick = tapVersion,
-                        pressFeedbackType = PressFeedbackType.Sink,
-                        showIndication = true,
                     ) {
                         BasicComponent(
                             title = "书签助手",
@@ -204,7 +175,7 @@ private fun MiuixAppInfo(
                         )
                     }
                 }
-                if (developerVisible) item {
+                item {
                     MiuixCard {
                         ArrowPreference(
                             title = "开发者选项",
@@ -237,6 +208,7 @@ private fun MiuixAppInfo(
     }
     message?.let {
         WindowDialog(show = true, onDismissRequest = dismissMessage) {
+            MiuixDialogAdvancedMaterial()
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 top.yukonga.miuix.kmp.basic.Text(it)
                 MiuixTextButton("知道了", dismissMessage, Modifier.fillMaxWidth())
@@ -247,9 +219,7 @@ private fun MiuixAppInfo(
 
 @Composable
 private fun MaterialAppInfo(
-    developerVisible: Boolean,
     back: () -> Unit,
-    tapVersion: () -> Unit,
     developer: () -> Unit,
     project: () -> Unit,
 ) {
@@ -270,7 +240,7 @@ private fun MaterialAppInfo(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { Card(onClick = tapVersion, modifier = Modifier.fillMaxWidth()) {
+            item { Card(modifier = Modifier.fillMaxWidth()) {
                 ListItem(
                     headlineContent = { Text("书签助手") },
                     supportingContent = { Text(BuildConfig.VERSION_NAME) },
@@ -278,7 +248,7 @@ private fun MaterialAppInfo(
                 )
             } }
             item { Card(Modifier.fillMaxWidth()) {
-                if (developerVisible) InfoRow("开发者选项", "诊断、实验与调试数据", developer)
+                InfoRow("开发者选项", "诊断、实验与调试数据", developer)
                 InfoRow("项目主页", "viceyy/BookmarkHelper", project)
             } }
             item { Card(Modifier.fillMaxWidth()) {

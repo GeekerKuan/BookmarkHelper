@@ -14,11 +14,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -81,8 +83,10 @@ import pro.kisscat.www.bookmarkhelper.ui.UiMode
 import pro.kisscat.www.bookmarkhelper.ui.UiPreferences
 import pro.kisscat.www.bookmarkhelper.ui.component.miuix.MiuixBlurredBar
 import pro.kisscat.www.bookmarkhelper.ui.component.miuix.MiuixDatePickerBottomSheet
+import pro.kisscat.www.bookmarkhelper.ui.component.miuix.MiuixDialogAdvancedMaterial
 import pro.kisscat.www.bookmarkhelper.ui.component.miuix.rememberMiuixBlurBackdrop
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card as MiuixCard
 import top.yukonga.miuix.kmp.basic.CardDefaults as MiuixCardDefaults
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
@@ -521,8 +525,12 @@ private fun DataManagerScreen(
             show = true,
             onDismissRequest = { deleting = null },
         ) {
-            MiuixTextButton("删除", confirm, Modifier.fillMaxWidth())
-            MiuixTextButton("取消", { deleting = null }, Modifier.fillMaxWidth())
+            MiuixDialogButtons(
+                confirmText = "删除",
+                onConfirm = confirm,
+                onDismiss = { deleting = null },
+                destructive = true,
+            )
         } else AlertDialog(
             onDismissRequest = { deleting = null },
             title = { Text("删除这条记录？") },
@@ -544,8 +552,12 @@ private fun DataManagerScreen(
             show = true,
             onDismissRequest = { deletingSelection = false },
         ) {
-            MiuixTextButton("删除", confirm, Modifier.fillMaxWidth())
-            MiuixTextButton("取消", { deletingSelection = false }, Modifier.fillMaxWidth())
+            MiuixDialogButtons(
+                confirmText = "删除",
+                onConfirm = confirm,
+                onDismiss = { deletingSelection = false },
+                destructive = true,
+            )
         } else AlertDialog(
             onDismissRequest = { deletingSelection = false },
             title = { Text("删除选中的 ${selected.size} 条记录？") },
@@ -568,9 +580,10 @@ private fun DataManagerScreen(
             show = true,
             onDismissRequest = { movingSelection = false },
         ) {
-            MiuixTextField(folder, { folder = it }, label = "文件夹路径", modifier = Modifier.fillMaxWidth())
-            MiuixTextButton("移动", confirm, Modifier.fillMaxWidth())
-            MiuixTextButton("取消", { movingSelection = false }, Modifier.fillMaxWidth())
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                MiuixTextField(folder, { folder = it }, label = "文件夹路径", modifier = Modifier.fillMaxWidth())
+                MiuixDialogButtons("移动", confirm, { movingSelection = false })
+            }
         } else AlertDialog(
             onDismissRequest = { movingSelection = false },
             title = { Text("移动到文件夹") },
@@ -587,15 +600,16 @@ private fun DataManagerScreen(
             show = true,
             onDismissRequest = { creatingFolder = false },
         ) {
-            MiuixTextField(folderName, { folderName = it }, label = "文件夹名称", modifier = Modifier.fillMaxWidth())
-            MiuixTextButton("新建", {
-                creatingFolder = false
-                val target = listOf(folderPath, folderName).filter(String::isNotBlank).joinToString("/")
-                operationScope.launch(Dispatchers.IO) {
-                    IntermediateDataRepository.createBookmarkFolder(browser, target)
-                }
-            }, Modifier.fillMaxWidth())
-            MiuixTextButton("取消", { creatingFolder = false }, Modifier.fillMaxWidth())
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                MiuixTextField(folderName, { folderName = it }, label = "文件夹名称", modifier = Modifier.fillMaxWidth())
+                MiuixDialogButtons("新建", {
+                    creatingFolder = false
+                    val target = listOf(folderPath, folderName).filter(String::isNotBlank).joinToString("/")
+                    operationScope.launch(Dispatchers.IO) {
+                        IntermediateDataRepository.createBookmarkFolder(browser, target)
+                    }
+                }, { creatingFolder = false })
+            }
         }
     }
     if (movingFolder && selectedFolder != null && browser != null) {
@@ -606,25 +620,26 @@ private fun DataManagerScreen(
             show = true,
             onDismissRequest = { movingFolder = false },
         ) {
-            MiuixTextField(
-                destinationParent,
-                { destinationParent = it },
-                label = "目标父文件夹",
-                modifier = Modifier.fillMaxWidth(),
-            )
-            MiuixTextButton("移动", {
-                val source = selectedFolder ?: return@MiuixTextButton
-                operationScope.launch {
-                    val result = withContext(Dispatchers.IO) {
-                        IntermediateDataRepository.moveBookmarkFolder(browser, source, destinationParent)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                MiuixTextField(
+                    destinationParent,
+                    { destinationParent = it },
+                    label = "目标父文件夹",
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                MiuixDialogButtons("移动", {
+                    val source = selectedFolder ?: return@MiuixDialogButtons
+                    operationScope.launch {
+                        val result = withContext(Dispatchers.IO) {
+                            IntermediateDataRepository.moveBookmarkFolder(browser, source, destinationParent)
+                        }
+                        if (result is BookmarkFolderOperationResult.Completed) {
+                            selectedFolder = null
+                            movingFolder = false
+                        }
                     }
-                    if (result is BookmarkFolderOperationResult.Completed) {
-                        selectedFolder = null
-                        movingFolder = false
-                    }
-                }
-            }, Modifier.fillMaxWidth())
-            MiuixTextButton("取消", { movingFolder = false }, Modifier.fillMaxWidth())
+                }, { movingFolder = false })
+            }
         }
     }
     deletingFolder?.let { contents ->
@@ -635,14 +650,18 @@ private fun DataManagerScreen(
             show = true,
             onDismissRequest = { deletingFolder = null },
         ) {
-            MiuixTextButton("删除", {
-                deletingFolder = null
-                selectedFolder = null
-                operationScope.launch(Dispatchers.IO) {
-                    browser?.let { IntermediateDataRepository.deleteBookmarkFolder(it, contents.path, true) }
-                }
-            }, Modifier.fillMaxWidth())
-            MiuixTextButton("取消", { deletingFolder = null }, Modifier.fillMaxWidth())
+            MiuixDialogButtons(
+                confirmText = "删除",
+                onConfirm = {
+                    deletingFolder = null
+                    selectedFolder = null
+                    operationScope.launch(Dispatchers.IO) {
+                        browser?.let { IntermediateDataRepository.deleteBookmarkFolder(it, contents.path, true) }
+                    }
+                },
+                onDismiss = { deletingFolder = null },
+                destructive = true,
+            )
         }
     }
     historyPickerDate?.let { initialDate ->
@@ -957,6 +976,40 @@ private fun ContextToolbarItem(visible: Boolean, content: @Composable () -> Unit
 }
 
 @Composable
+private fun MiuixDialogButtons(
+    confirmText: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    destructive: Boolean = false,
+) {
+    MiuixDialogAdvancedMaterial()
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        MiuixTextButton(
+            text = "取消",
+            onClick = onDismiss,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.width(20.dp))
+        MiuixTextButton(
+            text = confirmText,
+            onClick = onConfirm,
+            modifier = Modifier.weight(1f),
+            colors = if (destructive) {
+                MiuixButtonDefaults.textButtonColors(
+                    color = MiuixTheme.colorScheme.error,
+                    textColor = MiuixTheme.colorScheme.onError,
+                )
+            } else {
+                MiuixButtonDefaults.textButtonColorsPrimary()
+            },
+        )
+    }
+}
+
+@Composable
 private fun EditRecordDialog(
     row: ManagedDataRow,
     kind: IntermediateItemKind,
@@ -1008,8 +1061,7 @@ private fun MiuixEditRecordDialog(
             if (kind == IntermediateItemKind.BOOKMARK) {
                 MiuixTextField(detail, { detail = it }, label = "文件夹", modifier = Modifier.fillMaxWidth())
             }
-            MiuixTextButton("保存", { onSave(title, url, detail) }, Modifier.fillMaxWidth())
-            MiuixTextButton("取消", onDismiss, Modifier.fillMaxWidth())
+            MiuixDialogButtons("保存", { onSave(title, url, detail) }, onDismiss)
         }
     }
 }

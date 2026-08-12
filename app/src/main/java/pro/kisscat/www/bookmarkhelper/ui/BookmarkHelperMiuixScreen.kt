@@ -44,7 +44,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import pro.kisscat.www.bookmarkhelper.ui.component.FloatingBottomBar
 import pro.kisscat.www.bookmarkhelper.ui.component.FloatingBottomBarItem
 import pro.kisscat.www.bookmarkhelper.ui.component.miuix.MiuixBlurredBar
+import pro.kisscat.www.bookmarkhelper.ui.component.miuix.MiuixDialogAdvancedMaterial
 import pro.kisscat.www.bookmarkhelper.ui.component.miuix.rememberMiuixBlurBackdrop
 import pro.kisscat.www.bookmarkhelper.ui.theme.isInDarkTheme
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -112,16 +115,29 @@ fun BookmarkHelperMiuixScreen(state: BookmarkHelperUiState, actions: BookmarkHel
         initialPage = state.selectedPage.index,
         pageCount = { MainPage.entries.size },
     )
+    var programmaticTarget by remember { mutableStateOf<Int?>(null) }
+    val currentSelectedPage by rememberUpdatedState(state.selectedPage)
+    val currentActions by rememberUpdatedState(actions)
     LaunchedEffect(state.selectedPage) {
-        if (pagerState.currentPage != state.selectedPage.index) {
-            if (state.transitionsEnabled) pagerState.animateScrollToPage(state.selectedPage.index)
-            else pagerState.scrollToPage(state.selectedPage.index)
+        val target = state.selectedPage.index
+        if (pagerState.currentPage != target) {
+            programmaticTarget = target
+            try {
+                if (state.transitionsEnabled) pagerState.animateScrollToPage(target)
+                else pagerState.scrollToPage(target)
+            } finally {
+                if (programmaticTarget == target && pagerState.currentPage == target) {
+                    programmaticTarget = null
+                }
+            }
         }
     }
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.settledPage }.collect { index ->
             val page = MainPage.fromIndex(index)
-            if (page != state.selectedPage) actions.selectPage(page)
+            if (programmaticTarget == null && page != currentSelectedPage) {
+                currentActions.selectPage(page)
+            }
         }
     }
     Scaffold(
@@ -143,7 +159,7 @@ fun BookmarkHelperMiuixScreen(state: BookmarkHelperUiState, actions: BookmarkHel
                             bottom = 10.dp + WindowInsets.navigationBars
                                 .asPaddingValues().calculateBottomPadding()
                         ),
-                    selectedIndex = { state.selectedPage.index },
+                    selectedIndex = state.selectedPage.index,
                     onSelected = { actions.selectPage(MainPage.fromIndex(it)) },
                     backdrop = contentBackdrop,
                     tabsCount = destinations.size,
@@ -221,7 +237,7 @@ fun BookmarkHelperMiuixScreen(state: BookmarkHelperUiState, actions: BookmarkHel
         ) {
             HorizontalPager(
                 state = pagerState,
-                beyondViewportPageCount = 3,
+                beyondViewportPageCount = 1,
                 modifier = Modifier.fillMaxSize(),
             ) { index ->
                 MiuixPage(MainPage.fromIndex(index), state, actions, padding.calculateTopPadding())
@@ -269,7 +285,12 @@ private fun MiuixHome(state: BookmarkHelperUiState, actions: BookmarkHelperActio
             }
         }
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                showIndication = true,
+                pressFeedbackType = PressFeedbackType.Sink,
+                onClick = { /* Information-only card. */ },
+            ) {
                 BasicComponent(
                     title = "应用版本",
                     summary = BuildConfig.VERSION_NAME,
@@ -306,16 +327,6 @@ private fun MiuixHome(state: BookmarkHelperUiState, actions: BookmarkHelperActio
                 )
             }
         }
-        item { Card(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = actions.openAbout,
-        ) {
-            BasicComponent(
-                title = "应用信息",
-                summary = "书签助手 ${BuildConfig.VERSION_NAME} · 版本记录、开源许可与开发者选项",
-                startAction = { Icon(Icons.Default.Info, null) },
-            )
-        } }
         item { Spacer(Modifier.height(132.dp)) }
     }
 }
@@ -519,6 +530,16 @@ private fun MiuixSettings(state: BookmarkHelperUiState, actions: BookmarkHelperA
                 )
             }
         }
+        item {
+            Card {
+                ArrowPreference(
+                    title = "应用信息",
+                    summary = "版本、开源许可与开发者选项",
+                    startAction = { Icon(Icons.Default.Info, null) },
+                    onClick = actions.openAbout,
+                )
+            }
+        }
         item { Spacer(Modifier.height(132.dp)) }
     }
 }
@@ -527,6 +548,7 @@ private fun MiuixSettings(state: BookmarkHelperUiState, actions: BookmarkHelperA
 private fun MiuixDialogs(state: BookmarkHelperUiState, actions: BookmarkHelperActions) {
     state.dialogMessage?.let { message ->
         WindowDialog(show = true, onDismissRequest = actions.dismissMessage) {
+            MiuixDialogAdvancedMaterial()
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(message)
                 TextButton(text = "知道了", onClick = actions.dismissMessage, modifier = Modifier.fillMaxWidth())

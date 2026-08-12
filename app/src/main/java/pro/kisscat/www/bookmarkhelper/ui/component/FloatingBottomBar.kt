@@ -28,7 +28,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +49,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.lerp
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import pro.kisscat.www.bookmarkhelper.ui.component.liquid.InnerShadow
 import pro.kisscat.www.bookmarkhelper.ui.component.liquid.innerShadow
@@ -174,7 +172,7 @@ fun RowScope.FloatingBottomBarItem(
 @Composable
 fun FloatingBottomBar(
     modifier: Modifier = Modifier,
-    selectedIndex: () -> Int,
+    selectedIndex: Int,
     onSelected: (index: Int) -> Unit,
     backdrop: Backdrop,
     tabsCount: Int,
@@ -217,7 +215,7 @@ fun FloatingBottomBar(
     val dampedDragAnimation = remember(animationScope, tabsCount, density, isLtr) {
         DampedDragAnimation(
             animationScope = animationScope,
-            initialValue = selectedIndex().toFloat(),
+            initialValue = selectedIndex.toFloat(),
             valueRange = 0f..(tabsCount - 1).toFloat(),
             visibilityThreshold = 0.001f,
             initialScale = 1f,
@@ -263,9 +261,9 @@ fun FloatingBottomBar(
     // single source of truth so taps, restored startup pages and programmatic navigation all
     // move the wrapping pill. The previous two-flow bridge could drop the first page change.
     LaunchedEffect(selectedIndex, dampedDragAnimation, tabsCount) {
-        snapshotFlow { selectedIndex().fastCoerceIn(0, tabsCount - 1) }.collectLatest { index ->
-            dampedDragAnimation.animateToValue(index.toFloat())
-        }
+        dampedDragAnimation.animateToValue(
+            selectedIndex.fastCoerceIn(0, tabsCount - 1).toFloat()
+        )
     }
 
     val interactiveHighlight = remember(animationScope, tabWidthPx) {
