@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
 import java.io.File
+import java.util.Calendar
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -326,19 +327,67 @@ object IntermediateDataRepository {
         search: String = "",
         browser: BrowserId? = null,
     ): Int {
-        val dayEnd = dayStartEpochMillis + 86_400_000L - 1L
+        val selectedDay = Calendar.getInstance().apply {
+            timeInMillis = dayStartEpochMillis
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val nextDayStart = (selectedDay.clone() as Calendar).apply {
+            add(Calendar.DAY_OF_MONTH, 1)
+        }.timeInMillis
         val normalizedSearch = search.trim()
         val pattern = "%${escapeLike(normalizedSearch)}%"
         val sourceCondition = sourceCondition("r", browser)
         return requireDatabase().readableDatabase.rawQuery(
-            "SELECT COUNT(*) FROM records r WHERE r.kind=? AND COALESCE(r.primary_time,0)>? " +
+            "SELECT COUNT(*) FROM records r WHERE r.kind=? AND COALESCE(r.primary_time,0)>=? " +
                 "AND (?='' OR r.title LIKE ? ESCAPE '\\' OR r.url LIKE ? ESCAPE '\\') " +
                 "AND $sourceCondition",
             (listOf(
-                IntermediateItemKind.HISTORY.databaseValue.toString(), dayEnd.toString(),
+                IntermediateItemKind.HISTORY.databaseValue.toString(), nextDayStart.toString(),
                 normalizedSearch, pattern, pattern,
             ) + browser?.let { listOf(it.name) }.orEmpty()).toTypedArray(),
         ).use { it.moveToFirst(); it.getInt(0) }
+    }
+
+    /** Returns every matching history record on one local calendar day, independent of paging. */
+    @Synchronized
+    fun historyRefsForLocalDay(
+        dayStartEpochMillis: Long,
+        search: String = "",
+        browser: BrowserId? = null,
+    ): Set<IntermediateItemRef> {
+        val dayStart = Calendar.getInstance().apply {
+            timeInMillis = dayStartEpochMillis
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val nextDayStart = (dayStart.clone() as Calendar).apply {
+            add(Calendar.DAY_OF_MONTH, 1)
+        }.timeInMillis
+        val normalizedSearch = search.trim()
+        val pattern = "%${escapeLike(normalizedSearch)}%"
+        val sourceCondition = sourceCondition("r", browser)
+        return requireDatabase().readableDatabase.rawQuery(
+            "SELECT DISTINCT r.id FROM records r WHERE r.kind=? " +
+                "AND COALESCE(r.primary_time,0)>=? AND COALESCE(r.primary_time,0)<? " +
+                "AND (?='' OR r.title LIKE ? ESCAPE '\\' OR r.url LIKE ? ESCAPE '\\') " +
+                "AND $sourceCondition ORDER BY r.id",
+            (listOf(
+                IntermediateItemKind.HISTORY.databaseValue.toString(),
+                dayStart.timeInMillis.toString(), nextDayStart.toString(),
+                normalizedSearch, pattern, pattern,
+            ) + browser?.let { listOf(it.name) }.orEmpty()).toTypedArray(),
+        ).use { cursor ->
+            buildSet {
+                while (cursor.moveToNext()) {
+                    add(IntermediateItemRef(cursor.getLong(0), IntermediateItemKind.HISTORY))
+                }
+            }
+        }
     }
 
     /** Returns immediate child folders plus direct records for a real folder page. */

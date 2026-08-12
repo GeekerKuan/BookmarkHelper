@@ -164,7 +164,9 @@ public final class OpenTabsSyncService {
                     snapshot.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
             List<CanonicalOpenTab> result = new ArrayList<>();
             try (Cursor cursor = database.rawQuery(
-                    "SELECT url,title,last_visited_at,flags FROM tabs ORDER BY last_visited_at DESC LIMIT ?",
+                    "SELECT url,title,last_visited_at,flags FROM tabs "
+                            + "WHERE (flags & 2) != 0 "
+                            + "ORDER BY last_visited_at DESC LIMIT ?",
                     new String[] { String.valueOf(MAX_TABS) })) {
                 int urlColumn = cursor.getColumnIndexOrThrow("url");
                 int titleColumn = cursor.getColumnIndexOrThrow("title");
@@ -175,10 +177,11 @@ public final class OpenTabsSyncService {
                     if (!isWebUrl(url)) continue;
                     String title = cursor.isNull(titleColumn) ? "" : cursor.getString(titleColumn);
                     long activeAt = normalizeEpochMillis(cursor.getLong(visitedColumn));
-                    boolean pinned = !cursor.isNull(flagsColumn) && (cursor.getInt(flagsColumn) & 2) != 0;
+                    int flags = cursor.isNull(flagsColumn) ? 0 : cursor.getInt(flagsColumn);
+                    if (!ViaTabFlags.isOpen(flags)) continue;
                     result.add(new CanonicalOpenTab(
                             title == null || title.trim().isEmpty() ? fallbackTitle(url) : title,
-                            url, activeAt, activeAt, pinned));
+                            url, activeAt, activeAt, false));
                 }
             }
             return result;

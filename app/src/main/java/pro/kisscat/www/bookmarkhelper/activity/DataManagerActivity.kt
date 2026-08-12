@@ -14,11 +14,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -26,6 +28,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -60,6 +64,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -81,10 +86,13 @@ import pro.kisscat.www.bookmarkhelper.ui.UiMode
 import pro.kisscat.www.bookmarkhelper.ui.UiPreferences
 import pro.kisscat.www.bookmarkhelper.ui.component.miuix.MiuixBlurredBar
 import pro.kisscat.www.bookmarkhelper.ui.component.miuix.MiuixDatePickerBottomSheet
+import pro.kisscat.www.bookmarkhelper.ui.component.miuix.MiuixDialogAdvancedMaterial
 import pro.kisscat.www.bookmarkhelper.ui.component.miuix.rememberMiuixBlurBackdrop
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card as MiuixCard
 import top.yukonga.miuix.kmp.basic.CardDefaults as MiuixCardDefaults
+import top.yukonga.miuix.kmp.basic.Checkbox as MiuixCheckbox
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 import top.yukonga.miuix.kmp.basic.FloatingToolbar
@@ -111,7 +119,6 @@ import top.yukonga.miuix.kmp.icon.extended.Favorites
 import top.yukonga.miuix.kmp.icon.extended.Folder
 import top.yukonga.miuix.kmp.icon.extended.Layers
 import top.yukonga.miuix.kmp.icon.extended.MoveFile
-import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Paste
 import top.yukonga.miuix.kmp.icon.extended.Recent
 import top.yukonga.miuix.kmp.icon.extended.UploadCloud
@@ -295,6 +302,7 @@ private fun DataManagerScreen(
     var search by remember { mutableStateOf("") }
     var historyOffset by remember { mutableIntStateOf(0) }
     var historyJumpGeneration by remember { mutableIntStateOf(0) }
+    var historyJumpOffset by remember { mutableStateOf<Int?>(null) }
     var limit by remember { mutableIntStateOf(100) }
     var page by remember { mutableStateOf(ManagedDataPage(emptyList(), 0, 0, false)) }
     var editing by remember { mutableStateOf<ManagedDataRow?>(null) }
@@ -317,7 +325,6 @@ private fun DataManagerScreen(
                 IntermediateDataRepository.queryBookmarkFolder(folderPath, search, 0, limit, browser)
             } else IntermediateDataRepository.query(kind, search, historyOffset, limit, browser)
         }
-        selected = selected.intersect(page.rows.map { it.ref }.toSet())
     }
 
     val toggle: (IntermediateItemRef) -> Unit = { ref ->
@@ -341,6 +348,17 @@ private fun DataManagerScreen(
         MiuixDataManagerContent(
             kind, page, search, { search = it; historyOffset = 0; limit = 100 }, { limit += 100 },
             { editing = it }, { deleting = it }, selected, toggle, selectGroup,
+            { timestamp ->
+                operationScope.launch {
+                    val dayRefs = withContext(Dispatchers.IO) {
+                        IntermediateDataRepository.historyRefsForLocalDay(timestamp, search, browser)
+                    }
+                    if (dayRefs.isNotEmpty()) {
+                        selectedFolder = null
+                        selected = if (dayRefs.all(selected::contains)) selected - dayRefs else selected + dayRefs
+                    }
+                }
+            },
             clearSelection, { deletingSelection = true },
             { movingSelection = true },
             { bookmarkClipboard = selected; selected = emptySet() },
@@ -371,6 +389,8 @@ private fun DataManagerScreen(
             },
             { timestamp -> historyPickerDate = timestamp },
             historyJumpGeneration,
+            historyJumpOffset,
+            { historyJumpOffset = null },
             browser != null,
             when (kind) {
                 IntermediateItemKind.BOOKMARK -> repositoryState.bookmarkCount > 0
@@ -521,8 +541,12 @@ private fun DataManagerScreen(
             show = true,
             onDismissRequest = { deleting = null },
         ) {
-            MiuixTextButton("删除", confirm, Modifier.fillMaxWidth())
-            MiuixTextButton("取消", { deleting = null }, Modifier.fillMaxWidth())
+            MiuixDialogButtons(
+                confirmText = "删除",
+                onConfirm = confirm,
+                onDismiss = { deleting = null },
+                destructive = true,
+            )
         } else AlertDialog(
             onDismissRequest = { deleting = null },
             title = { Text("删除这条记录？") },
@@ -544,8 +568,12 @@ private fun DataManagerScreen(
             show = true,
             onDismissRequest = { deletingSelection = false },
         ) {
-            MiuixTextButton("删除", confirm, Modifier.fillMaxWidth())
-            MiuixTextButton("取消", { deletingSelection = false }, Modifier.fillMaxWidth())
+            MiuixDialogButtons(
+                confirmText = "删除",
+                onConfirm = confirm,
+                onDismiss = { deletingSelection = false },
+                destructive = true,
+            )
         } else AlertDialog(
             onDismissRequest = { deletingSelection = false },
             title = { Text("删除选中的 ${selected.size} 条记录？") },
@@ -568,9 +596,10 @@ private fun DataManagerScreen(
             show = true,
             onDismissRequest = { movingSelection = false },
         ) {
-            MiuixTextField(folder, { folder = it }, label = "文件夹路径", modifier = Modifier.fillMaxWidth())
-            MiuixTextButton("移动", confirm, Modifier.fillMaxWidth())
-            MiuixTextButton("取消", { movingSelection = false }, Modifier.fillMaxWidth())
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                MiuixTextField(folder, { folder = it }, label = "文件夹路径", modifier = Modifier.fillMaxWidth())
+                MiuixDialogButtons("移动", confirm, { movingSelection = false })
+            }
         } else AlertDialog(
             onDismissRequest = { movingSelection = false },
             title = { Text("移动到文件夹") },
@@ -587,15 +616,16 @@ private fun DataManagerScreen(
             show = true,
             onDismissRequest = { creatingFolder = false },
         ) {
-            MiuixTextField(folderName, { folderName = it }, label = "文件夹名称", modifier = Modifier.fillMaxWidth())
-            MiuixTextButton("新建", {
-                creatingFolder = false
-                val target = listOf(folderPath, folderName).filter(String::isNotBlank).joinToString("/")
-                operationScope.launch(Dispatchers.IO) {
-                    IntermediateDataRepository.createBookmarkFolder(browser, target)
-                }
-            }, Modifier.fillMaxWidth())
-            MiuixTextButton("取消", { creatingFolder = false }, Modifier.fillMaxWidth())
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                MiuixTextField(folderName, { folderName = it }, label = "文件夹名称", modifier = Modifier.fillMaxWidth())
+                MiuixDialogButtons("新建", {
+                    creatingFolder = false
+                    val target = listOf(folderPath, folderName).filter(String::isNotBlank).joinToString("/")
+                    operationScope.launch(Dispatchers.IO) {
+                        IntermediateDataRepository.createBookmarkFolder(browser, target)
+                    }
+                }, { creatingFolder = false })
+            }
         }
     }
     if (movingFolder && selectedFolder != null && browser != null) {
@@ -606,25 +636,26 @@ private fun DataManagerScreen(
             show = true,
             onDismissRequest = { movingFolder = false },
         ) {
-            MiuixTextField(
-                destinationParent,
-                { destinationParent = it },
-                label = "目标父文件夹",
-                modifier = Modifier.fillMaxWidth(),
-            )
-            MiuixTextButton("移动", {
-                val source = selectedFolder ?: return@MiuixTextButton
-                operationScope.launch {
-                    val result = withContext(Dispatchers.IO) {
-                        IntermediateDataRepository.moveBookmarkFolder(browser, source, destinationParent)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                MiuixTextField(
+                    destinationParent,
+                    { destinationParent = it },
+                    label = "目标父文件夹",
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                MiuixDialogButtons("移动", {
+                    val source = selectedFolder ?: return@MiuixDialogButtons
+                    operationScope.launch {
+                        val result = withContext(Dispatchers.IO) {
+                            IntermediateDataRepository.moveBookmarkFolder(browser, source, destinationParent)
+                        }
+                        if (result is BookmarkFolderOperationResult.Completed) {
+                            selectedFolder = null
+                            movingFolder = false
+                        }
                     }
-                    if (result is BookmarkFolderOperationResult.Completed) {
-                        selectedFolder = null
-                        movingFolder = false
-                    }
-                }
-            }, Modifier.fillMaxWidth())
-            MiuixTextButton("取消", { movingFolder = false }, Modifier.fillMaxWidth())
+                }, { movingFolder = false })
+            }
         }
     }
     deletingFolder?.let { contents ->
@@ -635,14 +666,18 @@ private fun DataManagerScreen(
             show = true,
             onDismissRequest = { deletingFolder = null },
         ) {
-            MiuixTextButton("删除", {
-                deletingFolder = null
-                selectedFolder = null
-                operationScope.launch(Dispatchers.IO) {
-                    browser?.let { IntermediateDataRepository.deleteBookmarkFolder(it, contents.path, true) }
-                }
-            }, Modifier.fillMaxWidth())
-            MiuixTextButton("取消", { deletingFolder = null }, Modifier.fillMaxWidth())
+            MiuixDialogButtons(
+                confirmText = "删除",
+                onConfirm = {
+                    deletingFolder = null
+                    selectedFolder = null
+                    operationScope.launch(Dispatchers.IO) {
+                        browser?.let { IntermediateDataRepository.deleteBookmarkFolder(it, contents.path, true) }
+                    }
+                },
+                onDismiss = { deletingFolder = null },
+                destructive = true,
+            )
         }
     }
     historyPickerDate?.let { initialDate ->
@@ -658,9 +693,10 @@ private fun DataManagerScreen(
                     historyOffset = withContext(Dispatchers.IO) {
                         IntermediateDataRepository.historyOffsetForDate(dayStart, search, browser)
                     }
+                    limit = 100
+                    historyJumpOffset = historyOffset
                     historyJumpGeneration++
                     selected = emptySet()
-                    limit = 100
                 }
             },
         )
@@ -679,6 +715,7 @@ private fun MiuixDataManagerContent(
     selected: Set<IntermediateItemRef>,
     toggle: (IntermediateItemRef) -> Unit,
     selectGroup: (List<ManagedDataRow>) -> Unit,
+    selectHistoryDay: (Long) -> Unit,
     clearSelection: () -> Unit,
     deleteSelection: () -> Unit,
     moveSelection: () -> Unit,
@@ -693,6 +730,8 @@ private fun MiuixDataManagerContent(
     deleteSelectedFolder: () -> Unit,
     requestHistoryDateJump: (Long) -> Unit,
     historyJumpGeneration: Int,
+    historyJumpOffset: Int?,
+    consumeHistoryJump: () -> Unit,
     folderMutationEnabled: Boolean,
     exportAllEnabled: Boolean,
     exportAll: () -> Unit,
@@ -709,6 +748,7 @@ private fun MiuixDataManagerContent(
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberMiuixBlurBackdrop(blurEnabled)
     val barColor = if (backdrop != null) Color.Transparent else MiuixTheme.colorScheme.surface
+    val selectionMode = selected.isNotEmpty() || selectedFolder != null
     LaunchedEffect(listState, page.hasMore, page.rows.size, page.folders.size) {
         snapshotFlow {
             val info = listState.layoutInfo
@@ -719,10 +759,17 @@ private fun MiuixDataManagerContent(
             if (shouldLoad) loadMore()
         }
     }
-    LaunchedEffect(historyJumpGeneration) {
-        if (historyJumpGeneration > 0 && page.rows.isNotEmpty()) {
+    LaunchedEffect(historyJumpGeneration, historyJumpOffset, page.offset, page.rows) {
+        val targetOffset = historyJumpOffset
+        if (
+            historyJumpGeneration > 0 &&
+            targetOffset != null &&
+            page.offset == targetOffset &&
+            page.rows.isNotEmpty()
+        ) {
             // Search and summary occupy the first item; the target date starts immediately after it.
             listState.scrollToItem(1 + page.folders.size)
+            consumeHistoryJump()
         }
     }
     MiuixScaffold(topBar = {
@@ -785,11 +832,19 @@ private fun MiuixDataManagerContent(
                         summary = "${folder.recordCount} 条收藏",
                         startAction = {
                             MiuixIcon(
-                                if (folder.path == selectedFolder) MiuixIcons.Ok else MiuixIcons.Folder,
-                                if (folder.path == selectedFolder) "已选择" else null,
+                                MiuixIcons.Folder,
+                                null,
                             )
                         },
-                        endActions = { MiuixIcon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                        endActions = {
+                            AnimatedSelectionCheckbox(
+                                visible = selectionMode,
+                                checked = folder.path == selectedFolder,
+                            )
+                            if (!selectionMode) {
+                                MiuixIcon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
+                            }
+                        },
                     )
                 }
             }
@@ -809,8 +864,19 @@ private fun MiuixDataManagerContent(
                             MiuixText(section, Modifier.padding(horizontal = 16.dp))
                         }
                         MiuixTextButton(
-                            if (rows.all { it.ref in selected }) "取消全选" else "全选",
-                            { selectGroup(rows) },
+                            if (rows.all { it.ref in selected }) {
+                                if (kind == IntermediateItemKind.HISTORY) "取消当天" else "取消全选"
+                            } else {
+                                if (kind == IntermediateItemKind.HISTORY) "选择当天" else "全选"
+                            },
+                            {
+                                if (kind == IntermediateItemKind.HISTORY) {
+                                    rows.firstNotNullOfOrNull { it.timestampEpochMillis }
+                                        ?.let(selectHistoryDay)
+                                } else {
+                                    selectGroup(rows)
+                                }
+                            },
                         )
                     }
                 }
@@ -849,12 +915,17 @@ private fun MiuixDataManagerContent(
                         startAction = {
                             MiuixIcon(
                                 when {
-                                    row.ref in selected -> MiuixIcons.Ok
                                     kind == IntermediateItemKind.BOOKMARK -> MiuixIcons.Favorites
                                     kind == IntermediateItemKind.HISTORY -> MiuixIcons.Recent
                                     else -> MiuixIcons.Layers
                                 },
-                                if (row.ref in selected) "已选择" else null,
+                                null,
+                            )
+                        },
+                        endActions = {
+                            AnimatedSelectionCheckbox(
+                                visible = selectionMode,
+                                checked = row.ref in selected,
                             )
                         },
                     )
@@ -863,7 +934,7 @@ private fun MiuixDataManagerContent(
             }
             item { androidx.compose.foundation.layout.Spacer(Modifier.size(88.dp)) }
             }
-            val hasSelection = selected.isNotEmpty() || selectedFolder != null
+            val hasSelection = selectionMode
             if (hasSelection || canPaste || createFolder != null || exportAllEnabled) {
                 FloatingToolbar(
                     modifier = Modifier.align(Alignment.BottomStart)
@@ -957,6 +1028,57 @@ private fun ContextToolbarItem(visible: Boolean, content: @Composable () -> Unit
 }
 
 @Composable
+private fun AnimatedSelectionCheckbox(
+    visible: Boolean,
+    checked: Boolean,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn() + scaleIn(initialScale = 0.72f),
+        exit = fadeOut() + scaleOut(targetScale = 0.72f),
+    ) {
+        MiuixCheckbox(
+            state = if (checked) ToggleableState.On else ToggleableState.Off,
+            onClick = null,
+        )
+    }
+}
+
+@Composable
+private fun MiuixDialogButtons(
+    confirmText: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    destructive: Boolean = false,
+) {
+    MiuixDialogAdvancedMaterial()
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        MiuixTextButton(
+            text = "取消",
+            onClick = onDismiss,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.width(20.dp))
+        MiuixTextButton(
+            text = confirmText,
+            onClick = onConfirm,
+            modifier = Modifier.weight(1f),
+            colors = if (destructive) {
+                MiuixButtonDefaults.textButtonColors(
+                    color = MiuixTheme.colorScheme.error,
+                    textColor = MiuixTheme.colorScheme.onError,
+                )
+            } else {
+                MiuixButtonDefaults.textButtonColorsPrimary()
+            },
+        )
+    }
+}
+
+@Composable
 private fun EditRecordDialog(
     row: ManagedDataRow,
     kind: IntermediateItemKind,
@@ -1008,8 +1130,7 @@ private fun MiuixEditRecordDialog(
             if (kind == IntermediateItemKind.BOOKMARK) {
                 MiuixTextField(detail, { detail = it }, label = "文件夹", modifier = Modifier.fillMaxWidth())
             }
-            MiuixTextButton("保存", { onSave(title, url, detail) }, Modifier.fillMaxWidth())
-            MiuixTextButton("取消", onDismiss, Modifier.fillMaxWidth())
+            MiuixDialogButtons("保存", { onSave(title, url, detail) }, onDismiss)
         }
     }
 }

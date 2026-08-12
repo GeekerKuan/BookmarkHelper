@@ -89,7 +89,7 @@ class PersonalizationActivity : ComponentActivity() {
         enableEdgeToEdge()
         settings = readSettings()
         setContent {
-            BindSystemBack(settings.predictiveBack)
+            BindSystemBack(settings.predictiveBack, settings.predictiveBackMaxProgress)
             val systemDensity = LocalDensity.current
             val scaledDensity = Density(
                 density = systemDensity.density * settings.scale,
@@ -116,6 +116,7 @@ class PersonalizationActivity : ComponentActivity() {
         glass = UiPreferences.glassEnabled(this), scale = UiPreferences.pageScale(this),
         haptics = UiPreferences.hapticsEnabled(this), transitions = UiPreferences.transitionsEnabled(this),
         predictiveBack = UiPreferences.predictiveBackEnabled(this),
+        predictiveBackMaxProgress = UiPreferences.predictiveBackMaxProgress(this),
         showDataCardUrls = UiPreferences.showDataCardUrls(this),
     )
 
@@ -131,6 +132,7 @@ class PersonalizationActivity : ComponentActivity() {
         UiPreferences.setHapticsEnabled(this, value.haptics)
         UiPreferences.setTransitionsEnabled(this, value.transitions)
         UiPreferences.setPredictiveBackEnabled(this, value.predictiveBack)
+        UiPreferences.setPredictiveBackMaxProgress(this, value.predictiveBackMaxProgress)
         UiPreferences.setShowDataCardUrls(this, value.showDataCardUrls)
     }
 }
@@ -145,6 +147,7 @@ private data class AppearanceSettings(
     val haptics: Boolean = true,
     val transitions: Boolean = true,
     val predictiveBack: Boolean = true,
+    val predictiveBackMaxProgress: Float = 1f,
     val showDataCardUrls: Boolean = false,
 )
 
@@ -230,6 +233,32 @@ private fun MiuixAppearance(state: AppearanceSettings, back: () -> Unit, update:
                     checked = state.predictiveBack, onCheckedChange = { update(state.copy(predictiveBack = it)) },
                     startAction = { MiuixIcon(Icons.AutoMirrored.Rounded.MenuOpen, null) },
                 )
+                if (Build.VERSION.SDK_INT >= 34 && state.predictiveBack) {
+                    var predictiveProgress by remember(state.predictiveBackMaxProgress) {
+                        mutableFloatStateOf(state.predictiveBackMaxProgress)
+                    }
+                    BasicComponent(
+                        title = "预见式返回最大进度",
+                        summary = "调整返回手势中页面位移、缩放与淡出的最大幅度",
+                        startAction = { MiuixIcon(Icons.AutoMirrored.Rounded.MenuOpen, null) },
+                        endActions = { MiuixText("${(predictiveProgress * 100).toInt()}%") },
+                        bottomAction = {
+                            MiuixSlider(
+                                value = predictiveProgress,
+                                onValueChange = { predictiveProgress = it },
+                                onValueChangeFinished = {
+                                    update(state.copy(predictiveBackMaxProgress = predictiveProgress))
+                                },
+                                valueRange = .25f..1f,
+                                showKeyPoints = true,
+                                keyPoints = listOf(.25f, .5f, .75f, 1f),
+                                magnetThreshold = .015f,
+                                hapticEffect = if (state.haptics) SliderDefaults.SliderHapticEffect.Step
+                                else SliderDefaults.SliderHapticEffect.None,
+                            )
+                        },
+                    )
+                }
                 var slider by remember(state.scale) { mutableFloatStateOf(state.scale) }
                 BasicComponent(
                     title = "页面缩放", summary = "调整界面元素与留白尺寸",
