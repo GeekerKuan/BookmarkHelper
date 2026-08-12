@@ -13,9 +13,9 @@ android {
         targetSdk = 37
         // Experimental Via -> Edge branch. The final Coolapk package identity
         // and release signing key must be chosen before publishing.
-        versionCode = 10015
-        versionName = '1.0.0-alpha.1'
-        buildConfigField 'String', 'INTERNAL_VERSION', '"dev-20260810.1"'
+        versionCode = 10016
+        versionName = '1.0.0-alpha.2'
+        buildConfigField 'String', 'INTERNAL_VERSION', '"dev-20260813.1"'
 
         resourceConfigurations += ['zh', 'en']
     }
@@ -65,10 +65,11 @@ dependencies {
     implementation 'androidx.compose.material:material-icons-core'
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.ui:ui-tooling-preview'
-    implementation 'top.yukonga.miuix.kmp:miuix-ui-android:0.9.2'
-    implementation 'top.yukonga.miuix.kmp:miuix-icons-android:0.9.2'
-    implementation 'top.yukonga.miuix.kmp:miuix-preference-android:0.9.2'
-    implementation 'top.yukonga.miuix.kmp:miuix-blur-android:0.9.2'
+    implementation 'top.yukonga.miuix.kmp:miuix-ui-android:0.9.3'
+    implementation 'top.yukonga.miuix.kmp:miuix-icons-android:0.9.3'
+    implementation 'top.yukonga.miuix.kmp:miuix-preference-android:0.9.3'
+    implementation 'top.yukonga.miuix.kmp:miuix-blur-android:0.9.3'
+    implementation 'androidx.navigationevent:navigationevent-compose:1.1.2'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'
 
     // Provided by LSPosed/compatible frameworks at runtime; never bundled into the APK.

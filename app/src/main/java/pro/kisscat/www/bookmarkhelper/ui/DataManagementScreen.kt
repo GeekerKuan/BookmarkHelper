@@ -55,10 +55,7 @@ fun DataManagementMiuix(
         overscrollEffect = null,
     ) {
         item {
-            top.yukonga.miuix.kmp.basic.Text(
-                "整理浏览器数据，重复记录会自动合并并保留来源。",
-                modifier = Modifier.padding(horizontal = 8.dp),
-            )
+            MiuixPageLead("整理浏览器数据，重复记录会自动合并并保留来源。")
         }
         destinations.forEach { destination ->
             item {

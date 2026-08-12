@@ -15,7 +15,6 @@ object UiPreferences {
     private const val HAPTICS = "system_haptics"
     private const val TRANSITIONS = "system_transition_animations"
     private const val PREDICTIVE_BACK = "predictive_back"
-    private const val PREDICTIVE_BACK_MAX_PROGRESS = "predictive_back_max_progress"
     private const val NOTIFICATION_PERMISSION_ASKED = "notification_permission_asked"
     private const val SHOW_DATA_CARD_URLS = "show_data_card_urls"
 
@@ -34,8 +33,6 @@ object UiPreferences {
     fun hapticsEnabled(context: Context) = preferences(context).getBoolean(HAPTICS, true)
     fun transitionsEnabled(context: Context) = preferences(context).getBoolean(TRANSITIONS, true)
     fun predictiveBackEnabled(context: Context) = preferences(context).getBoolean(PREDICTIVE_BACK, true)
-    fun predictiveBackMaxProgress(context: Context) =
-        preferences(context).getFloat(PREDICTIVE_BACK_MAX_PROGRESS, 1f).coerceIn(.25f, 1f)
     fun showDataCardUrls(context: Context) = preferences(context).getBoolean(SHOW_DATA_CARD_URLS, false)
     fun notificationPermissionAsked(context: Context) =
         preferences(context).getBoolean(NOTIFICATION_PERMISSION_ASKED, false)
@@ -62,8 +59,6 @@ object UiPreferences {
         preferences(context).edit().putBoolean(TRANSITIONS, value).apply()
     fun setPredictiveBackEnabled(context: Context, value: Boolean) =
         preferences(context).edit().putBoolean(PREDICTIVE_BACK, value).apply()
-    fun setPredictiveBackMaxProgress(context: Context, value: Float) = preferences(context).edit()
-        .putFloat(PREDICTIVE_BACK_MAX_PROGRESS, value.coerceIn(.25f, 1f)).apply()
     fun setShowDataCardUrls(context: Context, value: Boolean) =
         preferences(context).edit().putBoolean(SHOW_DATA_CARD_URLS, value).apply()
     fun setNotificationPermissionAsked(context: Context, value: Boolean) =
