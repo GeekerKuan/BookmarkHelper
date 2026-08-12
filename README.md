@@ -5,6 +5,10 @@
 协作开发，并由维护者进行真机测试；欢迎通过 GitHub Issues 报告可复现问题、浏览器版本、
 Android/Root 环境和脱敏诊断包。请勿在 Issue 中上传真实浏览数据、账号信息或未脱敏数据库。
 
+> **发布状态：当前版本尚未在酷安或其他应用商店上架。**
+>
+> 目前本仓库只提供源码与开发进度，不存在官方酷安下载页。测试 APK 仅应从本仓库后续明确发布的 GitHub Release 获取；在首个 Release 创建前，请勿将第三方 APK 视为本 Fork 的正式版本。
+
 > **现代化实验分支（尚未作为稳定版发布）**
 >
 > 当前分支面向 Android 12 及以上的 Root 用户。核心已经改为浏览器无关的适配器与规范化数据模型：每个浏览器分别声明收藏、历史记录和标签页的读取/写入能力，任务层不再依赖特定数据库格式。当前 Via 与 Edge 支持收藏、历史记录的读取与写入；标签页仅开放经过验证的读取能力。写入前会创建应用私有事务备份，并在校验失败、目标进程重启、文件被并发修改或检测到未知格式时安全停止。
@@ -45,7 +49,7 @@ BookmarkHelper 文件仍保留其 Apache-2.0 归属。完整文本和署名见
 
 在首个测试版发布前，至少需要确认：Via 当前 `bookmarks` 表结构、Edge 在 `edge://version` 显示的 Profile Path、明文/账号/加密书签文件组合、Root 方案对 `cp --preserve=all`/`stat`/SELinux 标签的支持，以及导入后 Edge 的本地显示与重启持久性。测试只应使用专门创建的假书签，先验证备份恢复，再使用真实数据。
 
-## 酷安发布前仍需决定
+## 正式发布前仍需决定
 
 原应用包名和签名密钥不应被新维护者直接冒用。正式发布前需要确定新的 `applicationId`、长期保存的发布签名、版本号、维护者与隐私说明；Android 16 真机矩阵通过前只应标记为 Root 玩家测试版。
 
@@ -60,9 +64,7 @@ BookmarkHelper（书签助手）是一款Android平台下，浏览器书签转�
 
 BookmarkHelper是个人作品，完整开源代码，持续维护，永不考虑收费推广，不滥用Root权限，使用完毕可立即卸载，运行时按需连接网络。如果你用的爽，可以[鼓励一下](https://www.kisscat.pro/rewards/wechat-reward-image.png)，我将用于：支付VPS月租，开发更多精彩APP，谢谢您的点滴支持！
 
-BookmarkHelper APP目前仅在[酷安网上架](http://www.coolapk.com/apk/pro.kisscat.www.bookmarkhelper)并维护，如果您在其他渠道获得APK，则可能遭受盗版软件的困扰，请您在[酷安网](http://www.coolapk.com/apk/pro.kisscat.www.bookmarkhelper)获取最新稳定版软件。
-
-<a target="_blank" href="http://ww2.sinaimg.cn/mw690/becd6b85gw1f9oaniwbdig208e0dwu11.gif">使用教程Gif：5.8MB</a>
+> 存档校注：原 README 曾声明旧版应用在酷安维护，并引用一份新浪图床教程 GIF。该发布信息不适用于当前 Fork，GIF 也已失效，因此相关链接已移除。
 
 ## 精彩报道
 
