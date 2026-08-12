@@ -3,7 +3,7 @@ package pro.kisscat.www.bookmarkhelper.converter.support.impl;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.support.v4.content.ContextCompat;
+import androidx.core.content.ContextCompat;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -197,10 +197,10 @@ public class BaiduBrowser extends BasicBrowser {
         List<BaiduBookmark> result = new LinkedList<>();
         while (cursor.moveToNext()) {
             BaiduBookmark item = new BaiduBookmark();
-            item.setTitle(cursor.getString(cursor.getColumnIndex("title")));
-            item.setUrl(cursor.getString(cursor.getColumnIndex("url")));
-            item.setParent_uuid(cursor.getString(cursor.getColumnIndex("parent_uuid")));
-            item.setSync_uuid(cursor.getString(cursor.getColumnIndex("sync_uuid")));
+            item.setTitle(cursor.getString(cursor.getColumnIndexOrThrow("title")));
+            item.setUrl(cursor.getString(cursor.getColumnIndexOrThrow("url")));
+            item.setParent_uuid(cursor.getString(cursor.getColumnIndexOrThrow("parent_uuid")));
+            item.setSync_uuid(cursor.getString(cursor.getColumnIndexOrThrow("sync_uuid")));
             result.add(item);
         }
         return result;

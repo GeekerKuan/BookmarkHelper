@@ -3,7 +3,7 @@ package pro.kisscat.www.bookmarkhelper.converter.support.impl;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.support.v4.content.ContextCompat;
+import androidx.core.content.ContextCompat;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -114,8 +114,8 @@ public class H5Browser extends BasicBrowser {
             if (cursor != null && cursor.getCount() > 0) {
                 while (cursor.moveToNext()) {
                     Bookmark item = new Bookmark();
-                    item.setTitle(cursor.getString(cursor.getColumnIndex("title")));
-                    item.setUrl(cursor.getString(cursor.getColumnIndex("url")));
+                    item.setTitle(cursor.getString(cursor.getColumnIndexOrThrow("title")));
+                    item.setUrl(cursor.getString(cursor.getColumnIndexOrThrow("url")));
                     result.add(item);
                 }
             }

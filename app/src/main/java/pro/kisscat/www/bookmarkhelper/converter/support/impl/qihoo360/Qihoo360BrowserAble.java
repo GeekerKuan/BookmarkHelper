@@ -162,11 +162,11 @@ public class Qihoo360BrowserAble extends BasicBrowser {
         List<Qihoo360WithLoginedBookmark> result = new LinkedList<>();
         while (cursor.moveToNext()) {
             Qihoo360WithLoginedBookmark item = new Qihoo360WithLoginedBookmark();
-            item.setTitle(cursor.getString(cursor.getColumnIndex("title")));
-            item.setUrl(cursor.getString(cursor.getColumnIndex("url")));
-            item.setId(cursor.getLong(cursor.getColumnIndex("id")));
-            item.setParent_id(cursor.getLong(cursor.getColumnIndex("parent_id")));
-            item.setIs_folder(cursor.getInt(cursor.getColumnIndex("is_folder")));
+            item.setTitle(cursor.getString(cursor.getColumnIndexOrThrow("title")));
+            item.setUrl(cursor.getString(cursor.getColumnIndexOrThrow("url")));
+            item.setId(cursor.getLong(cursor.getColumnIndexOrThrow("id")));
+            item.setParent_id(cursor.getLong(cursor.getColumnIndexOrThrow("parent_id")));
+            item.setIs_folder(cursor.getInt(cursor.getColumnIndexOrThrow("is_folder")));
             result.add(item);
         }
         return result;
@@ -176,11 +176,11 @@ public class Qihoo360BrowserAble extends BasicBrowser {
         List<Qihoo360WithoutLoginBookmark> result = new LinkedList<>();
         while (cursor.moveToNext()) {
             Qihoo360WithoutLoginBookmark item = new Qihoo360WithoutLoginBookmark();
-            item.setTitle(cursor.getString(cursor.getColumnIndex("title")));
-            item.setUrl(cursor.getString(cursor.getColumnIndex("url")));
-            item.setFolder(cursor.getInt(cursor.getColumnIndex("folder")) + "");
-            item.setId(cursor.getLong(cursor.getColumnIndex("_id")));
-            item.setParent(cursor.getLong(cursor.getColumnIndex("parent")));
+            item.setTitle(cursor.getString(cursor.getColumnIndexOrThrow("title")));
+            item.setUrl(cursor.getString(cursor.getColumnIndexOrThrow("url")));
+            item.setFolder(cursor.getInt(cursor.getColumnIndexOrThrow("folder")) + "");
+            item.setId(cursor.getLong(cursor.getColumnIndexOrThrow("_id")));
+            item.setParent(cursor.getLong(cursor.getColumnIndexOrThrow("parent")));
             result.add(item);
         }
         return result;

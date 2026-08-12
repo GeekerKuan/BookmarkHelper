@@ -1,7 +1,7 @@
 package pro.kisscat.www.bookmarkhelper.converter.support.impl.chrome.impl.chrome.impl;
 
 import android.content.Context;
-import android.support.v4.content.ContextCompat;
+import androidx.core.content.ContextCompat;
 
 import java.util.LinkedList;
 import java.util.List;

@@ -5,16 +5,15 @@ import android.content.Context;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import lombok.Setter;
-import pro.kisscat.www.bookmarkhelper.BuildConfig;
 import pro.kisscat.www.bookmarkhelper.common.shared.MetaData;
 import pro.kisscat.www.bookmarkhelper.entry.app.App;
 import pro.kisscat.www.bookmarkhelper.entry.app.Bookmark;
 import pro.kisscat.www.bookmarkhelper.util.Path;
 import pro.kisscat.www.bookmarkhelper.util.appList.AppListUtil;
-import pro.kisscat.www.bookmarkhelper.util.json.JsonUtil;
 import pro.kisscat.www.bookmarkhelper.util.log.LogHelper;
 
 /**
@@ -108,28 +107,13 @@ public class BasicBrowser extends App implements BrowserAble {
     }
 
     private boolean isValidUrl(String bookmarkUrl) {
-        if (bookmarkUrl == null || bookmarkUrl.isEmpty() || !(bookmarkUrl.startsWith("http") || bookmarkUrl.startsWith("www")) || !bookmarkUrl.contains("://")) {
-            LogHelper.v("url is damage,url:" + bookmarkUrl + ",skip.");
+        if (bookmarkUrl == null) {
             return false;
         }
-        return true;
-    }
-
-    private transient boolean denyPrintBookmarkHasShow = false;
-
-    private boolean allowPrintBookmark(int currentIndex, int allSize) {
-        if (currentIndex <= 1) {
-            denyPrintBookmarkHasShow = false;
-        }
-        int threshold = 5;
-        if (allSize < threshold) {
-            return true;
-        }
-        if (!BuildConfig.DEBUG && currentIndex > threshold) {
-            if (!denyPrintBookmarkHasShow) {
-                LogHelper.v("There too many bookmark,skip unnecessary print.currentIndex:" + currentIndex + ",allSize:" + allSize);
-                denyPrintBookmarkHasShow = true;
-            }
+        String normalized = bookmarkUrl.trim().toLowerCase(Locale.US);
+        if (!(normalized.startsWith("http://") || normalized.startsWith("https://"))
+                || normalized.endsWith("://")) {
+            LogHelper.v("检测到无效网址，已跳过（日志不会记录网址内容）");
             return false;
         }
         return true;
@@ -151,25 +135,17 @@ public class BasicBrowser extends App implements BrowserAble {
         if (source == null || source.isEmpty()) {
             return;
         }
-        LogHelper.v("书签数据:" + JsonUtil.toJson(source));
-        LogHelper.v("书签条数:" + source.size());
-        LogHelper.v("总的书签条数:" + source.size());
-        int index = 0;
+        LogHelper.v("读取到的书签条数:" + source.size());
         int size = source.size();
         for (Bookmark item : source) {
-            index++;
-            String bookmarkUrl = item.getUrl();
+            String bookmarkUrl = item.getUrl() == null ? null : item.getUrl().trim();
             String bookmarkFolder = item.getFolder();
             String bookmarkTitle = item.getTitle();
-            if (allowPrintBookmark(index, size)) {
-                LogHelper.v("title:" + bookmarkTitle);
-                LogHelper.v("url:" + bookmarkUrl);
-            }
             if (!isValidUrl(bookmarkUrl)) {
                 continue;
             }
             if (bookmarkTitle == null || bookmarkTitle.isEmpty()) {
-                LogHelper.v("url:" + bookmarkTitle + " is empty,set to default value.");
+                LogHelper.v("检测到空标题，已使用默认标题");
                 bookmarkTitle = MetaData.BOOKMARK_TITLE_DEFAULT;
             }
             Bookmark bookmark = new Bookmark();
@@ -181,6 +157,7 @@ public class BasicBrowser extends App implements BrowserAble {
             target.add(bookmark);
         }
         setBookmarkSum(target.size());
+        LogHelper.v("有效书签条数:" + target.size() + "/" + size);
     }
 
     protected String getFileNameByTrimPath(String dir, String fileFullName) {

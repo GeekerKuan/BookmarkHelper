@@ -1,109 +1,91 @@
 package pro.kisscat.www.bookmarkhelper.util.log;
 
-import java.io.BufferedWriter;
+import android.os.Process;
+
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.Writer;
+import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import pro.kisscat.www.bookmarkhelper.BuildConfig;
 import pro.kisscat.www.bookmarkhelper.common.shared.MetaData;
-import pro.kisscat.www.bookmarkhelper.util.Path;
+import pro.kisscat.www.bookmarkhelper.diagnostics.DiagnosticLogPolicy;
+import pro.kisscat.www.bookmarkhelper.diagnostics.DiagnosticRedactor;
 import pro.kisscat.www.bookmarkhelper.entry.log.LogEntry;
-import pro.kisscat.www.bookmarkhelper.util.storage.ExternalStorageUtil;
-import pro.kisscat.www.bookmarkhelper.util.storage.InternalStorageUtil;
+import pro.kisscat.www.bookmarkhelper.util.context.ContextUtil;
 
-/**
- * Created with Android Studio.
- * Project:BookmarkHelper
- * User:ChengLiang
- * Mail:stevenchengmask@gmail.com
- * Date:2016/10/11
- * Time:14:18
- */
+/** App-private, size-bounded, privacy-filtered session logging. */
+public final class LogHelper {
+    private static final String LOG_DIR = "logs";
+    private static final int MAX_RETAINED_SESSION_FILES = 5;
+    private static final int MAX_QUEUED_ENTRIES = 2_000;
+    private static final int MAX_EXCEPTION_CAUSES = 4;
+    private static final int MAX_STACK_FRAMES_PER_CAUSE = 24;
+    private static final long MAX_SESSION_FILE_BYTES = 768L * 1_024L;
+    private static final byte[] ROTATION_MARKER =
+            "[EARLIER_SESSION_LOGS_DISCARDED_BY_SIZE_LIMIT]\n"
+                    .getBytes(StandardCharsets.UTF_8);
 
-public class LogHelper {
-    private static String LOG_DIR = Path.SDCARD_APP_ROOTPATH + Path.SDCARD_LOG_ROOTPATH;// 日志聚集的目录名
-    private static String MYLOG_PATH_SDCARD_DIR = null;// 日志文件在sdcard中的路径
-    private static int SDCARD_LOG_FILE_SAVE_DAYS = 30;// sd卡中日志文件的最多保存天数
-    private static String MYLOGFILEName = "Log.txt";// 本类输出的日志文件名称
-    private static SimpleDateFormat myLogSdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");// 日志的输出格式
-    private static SimpleDateFormat logfile = new SimpleDateFormat("yyyy-MM-dd");// 日志文件格式
+    private static final ConcurrentLinkedQueue<LogEntry> LOG_QUEUE =
+            new ConcurrentLinkedQueue<>();
+    private static final SimpleDateFormat LOG_TIMESTAMP =
+            new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
+    private static final SimpleDateFormat SESSION_FILENAME =
+            new SimpleDateFormat("yyyyMMdd-HHmmss-SSS", Locale.US);
 
-    private static ConcurrentLinkedQueue<LogEntry> logQueue = new ConcurrentLinkedQueue<>();
+    private static volatile boolean initialized;
+    private static File logDirectory;
+    private static File currentSessionLogFile;
 
-    public static void v(String msg) {
-        v(MetaData.LOG_V_DEFAULT, msg);
+    private LogHelper() {
     }
 
-    public static void w(Object msg) { // 警告信息
-        log(MetaData.LOG_W_DEFAULT, msg.toString(), 'w');
+    public static void v(String message) {
+        v(MetaData.LOG_V_DEFAULT, message);
     }
 
-    public static void w(String tag, Object msg) { // 警告信息
-        log(tag, msg.toString(), 'w');
+    public static void v(String tag, Object message) {
+        v(tag, String.valueOf(message), true);
     }
 
-    public static void e(Throwable throwable) { // 错误信息
-        e(MetaData.LOG_E_DEFAULT, printException(throwable));
+    public static void v(String message, boolean trim) {
+        v(MetaData.LOG_V_DEFAULT, message, trim);
     }
 
-    public static void e(String tag, Throwable throwable) { // 错误信息
-        log(tag, printException(throwable), 'e');
+    public static void v(String tag, String text, boolean trim) {
+        // All build variants use the same private file pipeline. Exported logs
+        // therefore never depend on logcat/System.out and always get sanitized.
+        log(tag, text, 'v');
     }
 
-    private static String printException(Throwable throwable) {
-        String msg = null;
-        Writer result = null;
-        PrintWriter printWriter = null;
-        try {
-            result = new StringWriter();
-            printWriter = new PrintWriter(result);
-            throwable.printStackTrace(printWriter);
-            msg = result.toString();
-        } finally {
-            if (printWriter != null) {
-                printWriter.flush();
-                printWriter.close();
-            }
-            if (result != null) {
-                try {
-                    result.flush();
-                    result.close();
-                } catch (IOException e) {
-                    LogHelper.e("printException finally IOException:" + e.getMessage());
-                    LogHelper.write();
-                    e.printStackTrace();
-                }
-            }
-        }
-        return msg == null ? "" : msg;
+    public static void w(Object message) {
+        log(MetaData.LOG_W_DEFAULT, String.valueOf(message), 'w');
     }
 
-    public static void d(String tag, Object msg) {// 调试信息
-        log(tag, msg.toString(), 'd');
-    }
-
-    public static void i(String tag, Object msg) {//
-        log(tag, msg.toString(), 'i');
-    }
-
-    public static void v(String tag, Object msg) {
-        v(tag, msg.toString(), true);
-    }
-
-    public static void v(String msg, boolean trim) {
-        v(MetaData.LOG_V_DEFAULT, msg, trim);
+    public static void w(String tag, Object message) {
+        log(tag, String.valueOf(message), 'w');
     }
 
     public static void w(String tag, String text) {
         log(tag, text, 'w');
+    }
+
+    public static void e(Throwable throwable) {
+        e(MetaData.LOG_E_DEFAULT, throwable);
+    }
+
+    public static void e(String tag, Throwable throwable) {
+        log(tag, printException(throwable), 'e');
     }
 
     public static void e(String tag, String text) {
@@ -114,163 +96,273 @@ public class LogHelper {
         e(MetaData.LOG_E_DEFAULT, text);
     }
 
+    public static void d(String tag, Object message) {
+        log(tag, String.valueOf(message), 'd');
+    }
+
     public static void d(String tag, String text) {
         log(tag, text, 'd');
+    }
+
+    public static void i(String tag, Object message) {
+        log(tag, String.valueOf(message), 'i');
     }
 
     public static void i(String tag, String text) {
         log(tag, text, 'i');
     }
 
-    public static void v(String tag, String text, boolean trim) {
-        if (text == null || text.isEmpty()) {
+    public static synchronized void init() {
+        if (initialized) {
             return;
         }
-        if (!BuildConfig.DEBUG && trim && text.length() > 1024) {
-            text = text.substring(0, 1024);
-            text += "...";
+        logDirectory = new File(ContextUtil.getApplicationContext().getFilesDir(), LOG_DIR);
+        if (!logDirectory.isDirectory() && !logDirectory.mkdirs()) {
+            throw new IllegalArgumentException("无法创建应用私有日志目录");
         }
-        if (BuildConfig.DEBUG) {
-            System.out.println("v    " + tag + "    " + text);
-        } else {
-            log(tag, text, 'v');
+        String fileName = "session-" + SESSION_FILENAME.format(new Date())
+                + "-p" + Process.myPid() + ".log";
+        currentSessionLogFile = new File(logDirectory, fileName);
+        try {
+            if (!currentSessionLogFile.isFile() && !currentSessionLogFile.createNewFile()) {
+                throw new IOException("createNewFile returned false");
+            }
+        } catch (IOException error) {
+            throw new IllegalArgumentException("无法创建应用私有日志文件", error);
         }
-    }
-
-    /**
-     * 根据tag, msg和等级，输出日志
-     */
-    private static void log(String tag, String msg, char level) {
-        recordLogToQueue(String.valueOf(level), tag, msg);
+        initialized = true;
+        pruneOldSessionFiles();
     }
 
     public static void write() {
-        if (!logQueue.isEmpty() && !WriteThread.isWriteThreadRuning) {//监察写线程是否工作中，没有 则创建
-            new WriteThread().start();
+        if (!LOG_QUEUE.isEmpty()) {
+            WriteThread.schedule();
         }
     }
 
-    private static void recordLogToQueue(String level, String tag, String text) {
-        logQueue.add(new LogEntry(level, tag, text));
+    /** Best-effort synchronous flush for crash capture and diagnostic export. */
+    public static void writeNow() {
+        flush();
+    }
+
+    /** Deletes all private session logs without touching backups or diagnostics. */
+    public static synchronized int clearAll() {
+        ensureInitialized();
+        LOG_QUEUE.clear();
+        int deleted = 0;
+        File[] files = logDirectory.listFiles(File::isFile);
+        if (files != null) {
+            for (File file : files) {
+                if (!file.delete() && file.exists()) {
+                    throw new IllegalStateException(
+                            "无法删除应用私有日志文件：" + file.getName());
+                }
+                deleted++;
+            }
+        }
+        try {
+            if (!currentSessionLogFile.createNewFile() && !currentSessionLogFile.isFile()) {
+                throw new IOException("createNewFile returned false");
+            }
+        } catch (IOException error) {
+            throw new IllegalStateException("无法重新创建当前会话日志", error);
+        }
+        return deleted;
+    }
+
+    /**
+     * Takes a bounded tail snapshot under the same monitor as flush/clear.
+     * Only the current and at most one previous privacy-filtered modern session
+     * can be exposed; legacy log names never enter the diagnostic exporter.
+     */
+    public static synchronized List<SessionLogSnapshot> snapshotRecentSessions(
+            int maximumTotalBytes, int maximumFiles) throws IOException {
+        if (maximumTotalBytes <= 0 || maximumFiles <= 0 || maximumFiles > 2) {
+            throw new IllegalArgumentException("Invalid diagnostic session snapshot limit");
+        }
+        flush();
+        ensureInitialized();
+
+        List<File> selected = new ArrayList<>();
+        selected.add(currentSessionLogFile);
+        File[] candidates = logDirectory.listFiles(file -> file.isFile()
+                && !Files.isSymbolicLink(file.toPath())
+                && DiagnosticLogPolicy.isModernSessionLogName(file.getName())
+                && !file.equals(currentSessionLogFile));
+        if (candidates != null && maximumFiles > 1) {
+            Arrays.sort(candidates, Comparator.comparingLong(File::lastModified).reversed());
+            for (File candidate : candidates) {
+                if (selected.size() >= maximumFiles) {
+                    break;
+                }
+                selected.add(candidate);
+            }
+        }
+
+        List<SessionLogSnapshot> snapshots = new ArrayList<>();
+        for (int index = 0; index < selected.size(); index++) {
+            File file = selected.get(index);
+            long length = file.length();
+            int fileLimit;
+            if (selected.size() == 1) {
+                fileLimit = maximumTotalBytes;
+            } else if (index == 0) {
+                // Preserve at least half of the total allowance for the prior
+                // crash session; unused current-session space flows to it.
+                fileLimit = (int) Math.min(length, maximumTotalBytes / 2);
+            } else {
+                fileLimit = maximumTotalBytes - snapshots.get(0).contents.length;
+            }
+            int count = (int) Math.min(length, fileLimit);
+            byte[] contents = new byte[count];
+            try (RandomAccessFile input = new RandomAccessFile(file, "r")) {
+                input.seek(Math.max(0L, length - count));
+                input.readFully(contents);
+            }
+            snapshots.add(new SessionLogSnapshot(contents, length > count, index == 0));
+        }
+        return snapshots;
+    }
+
+    static boolean hasPendingEntries() {
+        return !LOG_QUEUE.isEmpty();
+    }
+
+    static synchronized void flush() {
+        if (LOG_QUEUE.isEmpty()) {
+            return;
+        }
+        ensureInitialized();
+        FileOutputStream output = null;
+        long written = currentSessionLogFile.length();
+        try {
+            output = new FileOutputStream(currentSessionLogFile, true);
+            LogEntry entry;
+            while ((entry = LOG_QUEUE.poll()) != null) {
+                String line = LOG_TIMESTAMP.format(entry.getTime())
+                        + "    " + entry.getLevel()
+                        + "    " + DiagnosticRedactor.redactLine(entry.getTag())
+                        + "    " + DiagnosticRedactor.redactLine(entry.getText())
+                        + "\n";
+                byte[] encoded = line.getBytes(StandardCharsets.UTF_8);
+                if (written + encoded.length > MAX_SESSION_FILE_BYTES) {
+                    output.close();
+                    output = new FileOutputStream(currentSessionLogFile, false);
+                    output.write(ROTATION_MARKER);
+                    written = ROTATION_MARKER.length;
+                }
+                output.write(encoded);
+                written += encoded.length;
+            }
+            output.flush();
+            output.getFD().sync();
+        } catch (IOException error) {
+            // Do not recursively log a logger failure or spill it into logcat.
+        } finally {
+            if (output != null) {
+                try {
+                    output.close();
+                } catch (IOException ignored) {
+                    // Nothing more can be recovered here.
+                }
+            }
+        }
+    }
+
+    private static void log(String tag, String text, char level) {
+        String safeTag = DiagnosticRedactor.redactLine(tag == null ? "" : tag);
+        String safeText = DiagnosticRedactor.redactLine(text == null ? "" : text);
+        while (LOG_QUEUE.size() >= MAX_QUEUED_ENTRIES) {
+            LOG_QUEUE.poll();
+        }
+        LOG_QUEUE.add(new LogEntry(String.valueOf(level), safeTag, safeText));
         write();
     }
 
-    /**
-     * 打开日志文件并写入日志
-     **/
-    synchronized static void flush() {// 新建或打开日志文件
-        if (logQueue.isEmpty()) {
+    private static String printException(Throwable throwable) {
+        if (throwable == null) {
+            return "null throwable";
+        }
+        StringBuilder summary = new StringBuilder();
+        IdentityHashMap<Throwable, Boolean> seen = new IdentityHashMap<>();
+        Throwable current = throwable;
+        int causes = 0;
+        while (current != null && causes < MAX_EXCEPTION_CAUSES
+                && seen.put(current, Boolean.TRUE) == null) {
+            if (causes > 0) {
+                summary.append("Caused by: ");
+            }
+            // Throwable messages are untrusted and often contain SQLite rows,
+            // URLs, titles, tokens or paths. Only structural crash data is kept.
+            summary.append(current.getClass().getName()).append('\n');
+            StackTraceElement[] stack = current.getStackTrace();
+            int frameCount = Math.min(stack.length, MAX_STACK_FRAMES_PER_CAUSE);
+            for (int index = 0; index < frameCount; index++) {
+                summary.append("    at ").append(stack[index]).append('\n');
+            }
+            if (stack.length > frameCount) {
+                summary.append("    ... ").append(stack.length - frameCount)
+                        .append(" frames omitted\n");
+            }
+            current = current.getCause();
+            causes++;
+        }
+        if (current != null) {
+            summary.append("... additional causes omitted\n");
+        }
+        return summary.toString();
+    }
+
+    private static void ensureInitialized() {
+        if (!initialized) {
+            init();
+        }
+    }
+
+    private static void pruneOldSessionFiles() {
+        File[] files = logDirectory.listFiles(File::isFile);
+        if (files == null) {
             return;
         }
-        if (!isInit()) {
-            init();
-            if (!isInit()) {
-                System.out.println("LogHelper init not work.");
-                return;
+        List<File> previousSessions = new ArrayList<>();
+        for (File file : files) {
+            if (!DiagnosticLogPolicy.isModernSessionLogName(file.getName())) {
+                // Legacy *Log.txt files may predate privacy filtering. They are
+                // never exported and are removed during the migration when possible.
+                file.delete();
+            } else if (!file.equals(currentSessionLogFile)) {
+                previousSessions.add(file);
             }
         }
-        FileWriter filerWriter = null;
-        BufferedWriter bufWriter = null;
-        try {
-            while (!logQueue.isEmpty()) {
-                LogEntry logEntry = logQueue.poll();
-                if (logEntry == null) {
-                    break;
-                }
-                Date recordTime = logEntry.getTime();
-                String needWriteFile = logfile.format(recordTime);
-                String needWriteMessage = myLogSdf.format(recordTime) + "    " + logEntry.getLevel() + "    " + logEntry.getTag() + "    " + logEntry.getText();
-                File dir = new File(MYLOG_PATH_SDCARD_DIR);
-                dir.mkdirs();
-                File file = new File(MYLOG_PATH_SDCARD_DIR, needWriteFile + MYLOGFILEName);
-                if (!file.exists()) {
-                    if (file.createNewFile()) {
-                        file.setReadable(true);
-                        file.setWritable(true);
-                    } else {
-                        file.createNewFile();
-                    }
-                    filerWriter = new FileWriter(file, true);//后面这个参数代表是不是要接上文件中原来的数据，不进行覆盖
-                    bufWriter = new BufferedWriter(filerWriter);
-                }
-                if (filerWriter == null) {
-                    filerWriter = new FileWriter(file, true);
-                    bufWriter = new BufferedWriter(filerWriter);
-                }
-                bufWriter.write(needWriteMessage);
-                bufWriter.newLine();
-            }
-            if (bufWriter != null) {
-                bufWriter.flush();
-                bufWriter.close();
-            }
-            if (filerWriter != null) {
-                filerWriter.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (bufWriter != null) {
-                try {
-                    bufWriter.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (filerWriter != null) {
-                try {
-                    filerWriter.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+        previousSessions.sort(Comparator.comparingLong(File::lastModified).reversed());
+        int retainedPrevious = Math.max(0, MAX_RETAINED_SESSION_FILES - 1);
+        for (int index = retainedPrevious; index < previousSessions.size(); index++) {
+            previousSessions.get(index).delete();
         }
     }
 
-    /**
-     * 删除指定的日志文件
-     */
-    public static void delFile() {// 删除日志文件
-        String needDelFiel = logfile.format(getDateBefore());
-        File file = new File(MYLOG_PATH_SDCARD_DIR, needDelFiel + MYLOGFILEName);
-        if (file.exists()) {
-            file.delete();
+    public static final class SessionLogSnapshot {
+        private final byte[] contents;
+        private final boolean truncatedAtStart;
+        private final boolean currentSession;
+
+        private SessionLogSnapshot(
+                byte[] contents, boolean truncatedAtStart, boolean currentSession) {
+            this.contents = contents;
+            this.truncatedAtStart = truncatedAtStart;
+            this.currentSession = currentSession;
         }
-    }
 
-    /**
-     * 得到现在时间前的几天日期，用来得到需要删除的日志文件名
-     */
-    private static Date getDateBefore() {
-        Date nowtime = new Date();
-        Calendar now = Calendar.getInstance();
-        now.setTime(nowtime);
-        now.set(Calendar.DATE, now.get(Calendar.DATE) - SDCARD_LOG_FILE_SAVE_DAYS);
-        return now.getTime();
-    }
-
-    private static boolean isSuccessInit = false;
-
-    private static boolean isInit() {
-        return isSuccessInit;
-    }
-
-
-    public static void init() {
-        String exPath = new ExternalStorageUtil().getRootPath();
-        String inPath = new InternalStorageUtil().getRootPath();
-        if (exPath != null && !exPath.isEmpty()) {
-            Path.SDCARD_ROOTPATH = exPath;
-        } else if (inPath != null && !inPath.isEmpty()) {
-            Path.SDCARD_ROOTPATH = inPath;
-        } else {
-            throw new IllegalArgumentException("无法获取日志目录");
+        public byte[] getContents() {
+            return contents.clone();
         }
-        MYLOG_PATH_SDCARD_DIR = Path.SDCARD_ROOTPATH + LOG_DIR;
-        File appDirectory = new File(MYLOG_PATH_SDCARD_DIR);
-        if (!appDirectory.exists()) {
-            appDirectory.mkdir();
+
+        public boolean isTruncatedAtStart() {
+            return truncatedAtStart;
         }
-        isSuccessInit = true;
+
+        public boolean isCurrentSession() {
+            return currentSession;
+        }
     }
 }

@@ -3,7 +3,7 @@ package pro.kisscat.www.bookmarkhelper.converter.support.impl;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.support.v4.content.ContextCompat;
+import androidx.core.content.ContextCompat;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -118,9 +118,9 @@ public class LiebaoBrowser extends BasicBrowser {
             if (cursor != null && cursor.getCount() > 0) {
                 while (cursor.moveToNext()) {
                     Bookmark item = new Bookmark();
-                    item.setTitle(cursor.getString(cursor.getColumnIndex("title")));
-                    item.setUrl(cursor.getString(cursor.getColumnIndex("url")));
-                    Integer folderId = cursor.getInt(cursor.getColumnIndex("folder_id"));
+                    item.setTitle(cursor.getString(cursor.getColumnIndexOrThrow("title")));
+                    item.setUrl(cursor.getString(cursor.getColumnIndexOrThrow("url")));
+                    Integer folderId = cursor.getInt(cursor.getColumnIndexOrThrow("folder_id"));
                     String folderPath = trim(parseFolderPath(folderId, folders));
                     item.setFolder(folderPath == null ? "" : folderPath);
                     result.add(item);
@@ -175,9 +175,9 @@ public class LiebaoBrowser extends BasicBrowser {
             if (cursor != null && cursor.getCount() > 0) {
                 while (cursor.moveToNext()) {
                     LiebaoFolder item = new LiebaoFolder();
-                    item.setId(cursor.getInt(cursor.getColumnIndex("_id")));
-                    item.setParent(cursor.getInt(cursor.getColumnIndex("parent")));
-                    item.setTitle(cursor.getString(cursor.getColumnIndex("title")));
+                    item.setId(cursor.getInt(cursor.getColumnIndexOrThrow("_id")));
+                    item.setParent(cursor.getInt(cursor.getColumnIndexOrThrow("parent")));
+                    item.setTitle(cursor.getString(cursor.getColumnIndexOrThrow("title")));
                     result.put(item.getId(), item);
                 }
             }

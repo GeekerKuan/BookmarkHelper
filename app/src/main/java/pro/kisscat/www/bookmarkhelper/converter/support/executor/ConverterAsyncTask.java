@@ -1,7 +1,6 @@
 package pro.kisscat.www.bookmarkhelper.converter.support.executor;
 
 import android.os.AsyncTask;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 
@@ -13,13 +12,9 @@ import pro.kisscat.www.bookmarkhelper.pojo.executor.Result;
 import pro.kisscat.www.bookmarkhelper.entry.app.Bookmark;
 import pro.kisscat.www.bookmarkhelper.entry.rule.Rule;
 import pro.kisscat.www.bookmarkhelper.exception.ConverterException;
+import pro.kisscat.www.bookmarkhelper.sync.root.RootShell;
 import pro.kisscat.www.bookmarkhelper.util.context.ContextUtil;
-import pro.kisscat.www.bookmarkhelper.util.json.JsonUtil;
 import pro.kisscat.www.bookmarkhelper.util.log.LogHelper;
-import pro.kisscat.www.bookmarkhelper.util.progressBar.ProgressBarUtil;
-import pro.kisscat.www.bookmarkhelper.util.root.RootUtil;
-import pro.kisscat.www.bookmarkhelper.util.storage.ExternalStorageUtil;
-import pro.kisscat.www.bookmarkhelper.util.storage.InternalStorageUtil;
 
 /**
  * Created with Android Studio.
@@ -32,44 +27,27 @@ import pro.kisscat.www.bookmarkhelper.util.storage.InternalStorageUtil;
 
 public class ConverterAsyncTask extends AsyncTask<Params, Void, Result> {
     private static final String TAG = "ConverterAsyncTask";
-    private ProgressBarUtil progressBarUtil;
     private Handler handler;
-
-    public ConverterAsyncTask(ProgressBarUtil progressBarUtil) {
-        this.progressBarUtil = progressBarUtil;
-    }
-
-    @Override
-    protected void onProgressUpdate(Void... values) {
-        progressBarUtil.next();
-    }
 
     @Override
     protected void onPostExecute(Result result) {
         result.setComplete(true);
-        handleDialogMessage(JsonUtil.toJson(result));
-        progressBarUtil.stop();
+        handleDialogMessage(result);
         LogHelper.write();
     }
 
-    private void handleToastMessage(String msg) {
-        handleMessage(0, msg);
-    }
-
     private void handleToastMessage(Result result) {
-        handleToastMessage(JsonUtil.toJson(result));
+        handleMessage(0, result);
     }
 
-    private void handleDialogMessage(String msg) {
-        handleMessage(1, msg);
+    private void handleDialogMessage(Result result) {
+        handleMessage(1, result);
     }
 
-    private void handleMessage(int whhat, String msg) {
+    private void handleMessage(int what, Result result) {
         Message message = new Message();
-        message.what = whhat;
-        Bundle bundle = new Bundle();
-        bundle.putString("result", msg);
-        message.setData(bundle);
+        message.what = what;
+        message.obj = result;
         handler.sendMessage(message);
     }
 
@@ -90,7 +68,7 @@ public class ConverterAsyncTask extends AsyncTask<Params, Void, Result> {
         String sourceMessage = rule.getSource().getPreExecuteConverterMessage();
         if (sourceMessage != null) {
             Result result = new Result(sourceMessage);
-            handleToastMessage(JsonUtil.toJson(result));
+            handleToastMessage(result);
         }
     }
 
@@ -117,7 +95,7 @@ public class ConverterAsyncTask extends AsyncTask<Params, Void, Result> {
         int ret = -1;
         try {
             handleUpgradeRootPermissionMessage();
-            boolean isRoot = RootUtil.upgradeRootPermission();
+            boolean isRoot = RootShell.isAvailable();
             if (!isRoot) {
                 String errorUpgrade = "获取Root权限失败，不能使用.";
                 result.setErrorMsg(errorUpgrade);
@@ -127,17 +105,6 @@ public class ConverterAsyncTask extends AsyncTask<Params, Void, Result> {
                 publishProgress();
                 LogHelper.v("成功获取了Root权限.");
             }
-            handleCheckReadAndWriteAbleMessage();
-            if (!InternalStorageUtil.remountDataDir()) {
-                result.setErrorMsg(ContextUtil.getSystemNotReadOrWriteable());
-                return result;
-            }
-            publishProgress();
-            if (!ExternalStorageUtil.remountSDCardDir()) {
-                result.setErrorMsg(ContextUtil.getSDCardNotReadOrWriteable());
-                return result;
-            }
-            publishProgress();
             handleExecuteRunningMessage();
             start = System.currentTimeMillis();
             ret = execute(rule);
@@ -161,7 +128,10 @@ public class ConverterAsyncTask extends AsyncTask<Params, Void, Result> {
                     }
                 }
                 result.setSuccessCount(ret);
-                result.setSuccessMsg(rule.getSource().getName() + "：" + ret + "条书签合并完成，重启" + rule.getTarget().getName() + "后见效" + (s == null ? "." : ("，耗时：" + s + ".")));
+                result.setSuccessMsg(rule.getSource().getName() + "：已增量导入" + ret
+                        + "条书签到" + rule.getTarget().getName()
+                        + "。系统已尝试打开 Edge；微软账号云同步由 Edge 自身决定"
+                        + (s == null ? "。" : ("，耗时：" + s + "。")));
             } else if (ret == 0) {
                 result.setSuccessCount(ret);
                 result.setSuccessMsg(rule.getSource().getName() + "：" + "所有书签已存在，不需要合并.");

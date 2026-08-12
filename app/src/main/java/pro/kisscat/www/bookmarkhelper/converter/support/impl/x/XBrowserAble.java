@@ -45,9 +45,9 @@ public class XBrowserAble extends BasicBrowser {
             if (cursor != null && cursor.getCount() > 0) {
                 while (cursor.moveToNext()) {
                     Bookmark item = new Bookmark();
-                    item.setTitle(cursor.getString(cursor.getColumnIndex("title")));
-                    item.setUrl(cursor.getString(cursor.getColumnIndex("url")));
-                    String folder = cursor.getString(cursor.getColumnIndex("parent"));
+                    item.setTitle(cursor.getString(cursor.getColumnIndexOrThrow("title")));
+                    item.setUrl(cursor.getString(cursor.getColumnIndexOrThrow("url")));
+                    String folder = cursor.getString(cursor.getColumnIndexOrThrow("parent"));
                     folder = trim(folder);
                     item.setFolder(folder);
                     result.add(item);

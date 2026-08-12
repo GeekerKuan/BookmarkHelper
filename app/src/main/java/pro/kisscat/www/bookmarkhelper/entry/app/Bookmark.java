@@ -1,8 +1,5 @@
 package pro.kisscat.www.bookmarkhelper.entry.app;
 
-import lombok.Getter;
-import lombok.Setter;
-
 /**
  * Created with Android Studio.
  * Project:BookmarkHelper
@@ -13,15 +10,33 @@ import lombok.Setter;
  */
 
 public class Bookmark {
-    @Getter
-    @Setter
     private String title;
-    @Getter
-    @Setter
     private String url;
-    @Getter
-    @Setter
     private String folder;
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public String getFolder() {
+        return folder;
+    }
+
+    public void setFolder(String folder) {
+        this.folder = folder;
+    }
 
 //    public boolean equals(Object anObject) {
 //        if (this == anObject) {

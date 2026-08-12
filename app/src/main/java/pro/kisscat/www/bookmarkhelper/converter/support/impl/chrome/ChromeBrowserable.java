@@ -10,9 +10,6 @@ import java.util.List;
 import pro.kisscat.www.bookmarkhelper.converter.support.BasicBrowser;
 import pro.kisscat.www.bookmarkhelper.entry.app.Bookmark;
 import pro.kisscat.www.bookmarkhelper.pojo.converter.chrome.ChromeBookmark;
-import pro.kisscat.www.bookmarkhelper.util.file.FileUtil;
-import pro.kisscat.www.bookmarkhelper.entry.file.File;
-import pro.kisscat.www.bookmarkhelper.util.json.JsonUtil;
 import pro.kisscat.www.bookmarkhelper.util.log.LogHelper;
 
 /**
@@ -37,12 +34,7 @@ public class ChromeBrowserAble extends BasicBrowser {
                 LogHelper.v("chromeBookmark is null.");
                 return result;
             }
-            File fileShow = FileUtil.formatFileSize(file);
-            if (fileShow.isOver10KB()) {
-                LogHelper.v("书签数据文件大小超过10KB,skip print.size:" + fileShow.toString());
-            } else {
-                LogHelper.v("书签数据:" + JsonUtil.toJson(chromeBookmark));
-            }
+            LogHelper.v("书签数据文件字节数:" + file.length());
             List<Bookmark> bookmarks = chromeBookmark.fetchAll();
             if (bookmarks == null) {
                 LogHelper.v("bookmarks is null.");

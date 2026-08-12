@@ -4,8 +4,8 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.os.Build;
 
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -24,6 +24,10 @@ import pro.kisscat.www.bookmarkhelper.util.log.LogHelper;
  */
 
 public class AppListUtil {
+    private static final String[] REQUIRED_VISIBLE_PACKAGES = {
+            "mark.via",
+            "com.microsoft.emmx"
+    };
     private static Map<String, App> installedAllApp;
     public static String thisAppInfo;
     public static String thisAppPackageName;
@@ -55,38 +59,49 @@ public class AppListUtil {
             LogHelper.v("AppListUtil init failure,context.getPackageManager is null.");
             throw new InitException(globalMsg);
         }
-        List<PackageInfo> packages = packageManager.getInstalledPackages(0);
-        if (packages == null || packages.isEmpty()) {
-            LogHelper.v("AppListUtil init failure,packageManager.getInstalledPackages(0) is null or empty.");
-            throw new InitException(globalMsg);
-        }
         String mePackageName = context.getPackageName();
         thisAppPackageName = mePackageName;
-        for (PackageInfo packageInfo : packages) {
+        addPackage(packageManager, mePackageName, context, true);
+        for (String packageName : REQUIRED_VISIBLE_PACKAGES) {
+            addPackage(packageManager, packageName, context, false);
+        }
+        if (installedAllApp.isEmpty()) {
+            throw new InitException(globalMsg);
+        }
+        LogHelper.v("AppListUtil init success.");
+    }
+
+    private static void addPackage(PackageManager packageManager, String packageName,
+                                   Context context, boolean isCurrentApp) {
+        try {
+            PackageInfo packageInfo;
+            if (Build.VERSION.SDK_INT >= 33) {
+                packageInfo = packageManager.getPackageInfo(
+                        packageName, PackageManager.PackageInfoFlags.of(0L));
+            } else {
+                // Kept for Android 12 support.
+                //noinspection deprecation
+                packageInfo = packageManager.getPackageInfo(packageName, 0);
+            }
             ApplicationInfo applicationInfo = packageInfo.applicationInfo;
             App app = new App();
             app.setName(applicationInfo.loadLabel(packageManager).toString());
             app.setPackageName(packageInfo.packageName);
-            if (mePackageName != null && mePackageName.equals(packageInfo.packageName) && thisAppInfo == null) {
-                thisAppInfo = "App name:" + context.getString(R.string.app_name) + ",packageName:" + mePackageName + ",versionName:" + packageInfo.versionName + ",versionCode:" + packageInfo.versionCode;
+            if (isCurrentApp && thisAppInfo == null) {
+                thisAppInfo = "App name:" + context.getString(R.string.app_name)
+                        + ",packageName:" + packageName
+                        + ",versionName:" + packageInfo.versionName
+                        + ",versionCode:" + packageInfo.getLongVersionCode();
                 LogHelper.v(thisAppInfo);
             }
             app.setVersionName(packageInfo.versionName);
-            app.setVersionCode(packageInfo.versionCode);
-//            app.setIcon(applicationInfo.loadIcon(packageManager));
+            app.setVersionCode(packageInfo.getLongVersionCode());
             installedAllApp.put(app.getPackageName(), app);
-            /**
-             Only display the non-system app info
-             if ((packageInfo.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 0) {
-             appList.add(tmpInfo);//如果非系统应用，则添加至appList
-             }
-             */
+        } catch (PackageManager.NameNotFoundException notInstalled) {
+            if (isCurrentApp) {
+                throw new InitException("无法读取当前应用信息");
+            }
         }
-        if (installedAllApp == null) {
-            LogHelper.e("AppListUtil init failure,installedAllApp is null.");
-            throw new InitException("无法获取应用列表，请确认权限.");
-        }
-        LogHelper.v("AppListUtil init success.");
     }
 
     public static boolean isInstalled(Context context, String packageName) {

@@ -3,7 +3,7 @@ package pro.kisscat.www.bookmarkhelper.converter.support.impl;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.support.v4.content.ContextCompat;
+import androidx.core.content.ContextCompat;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -270,11 +270,11 @@ public class SogouBrowser extends BasicBrowser {
         List<SogouBookmark> result = new LinkedList<>();
         while (cursor.moveToNext()) {
             SogouBookmark item = new SogouBookmark();
-            item.setTitle(cursor.getString(cursor.getColumnIndex("f_title")));
-            item.setUrl(cursor.getString(cursor.getColumnIndex("f_url")));
-            item.setF_server_id(cursor.getString(cursor.getColumnIndex("f_server_id")));
-            item.setF_server_pid(cursor.getString(cursor.getColumnIndex("f_server_pid")));
-            item.setF_is_folder(cursor.getInt(cursor.getColumnIndex("f_is_folder")));
+            item.setTitle(cursor.getString(cursor.getColumnIndexOrThrow("f_title")));
+            item.setUrl(cursor.getString(cursor.getColumnIndexOrThrow("f_url")));
+            item.setF_server_id(cursor.getString(cursor.getColumnIndexOrThrow("f_server_id")));
+            item.setF_server_pid(cursor.getString(cursor.getColumnIndexOrThrow("f_server_pid")));
+            item.setF_is_folder(cursor.getInt(cursor.getColumnIndexOrThrow("f_is_folder")));
             result.add(item);
         }
         return result;

@@ -1,8 +1,5 @@
 package pro.kisscat.www.bookmarkhelper.exception;
 
-import android.content.Context;
-import android.widget.Toast;
-
 import pro.kisscat.www.bookmarkhelper.common.shared.MetaData;
 import pro.kisscat.www.bookmarkhelper.util.appList.AppListUtil;
 import pro.kisscat.www.bookmarkhelper.util.log.LogHelper;
@@ -19,7 +16,7 @@ import pro.kisscat.www.bookmarkhelper.util.log.LogHelper;
 public class CrashHandler implements Thread.UncaughtExceptionHandler {
     // 需求是 整个应用程序 只有一个 MyCrash-Handler
     private static CrashHandler INSTANCE;
-    private Context context;
+    private Thread.UncaughtExceptionHandler previousHandler;
 
     //1.私有化构造方法
     private CrashHandler() {
@@ -31,26 +28,34 @@ public class CrashHandler implements Thread.UncaughtExceptionHandler {
         return INSTANCE;
     }
 
-    public void init(Context context) {
-        this.context = context;
+    public void init() {
+        Thread.UncaughtExceptionHandler current = Thread.getDefaultUncaughtExceptionHandler();
+        if (current != this) {
+            previousHandler = current;
+        }
     }
 
 
     public void uncaughtException(Thread thread, Throwable throwable) {
-        // 在此可以把用户手机的一些信息以及异常信息捕获并上传,
-        String fatalErrorMessage = MetaData.LOG_E_FATAL + ":" + AppListUtil.thisAppInfo + " is crash.exception message:" + throwable.getMessage();
-        System.out.println(fatalErrorMessage);
-        LogHelper.e(MetaData.LOG_E_FATAL, fatalErrorMessage);
-        LogHelper.e(MetaData.LOG_E_FATAL, throwable);
-        LogHelper.write();
-        throwable.printStackTrace();
-        Toast.makeText(context, "Bug:我们已经妥善保护好现场，请将日志文件发给作者.", Toast.LENGTH_LONG).show();
+        // Exception messages can contain bookmark rows, URLs or database paths.
+        // Record only the public exception type; LogHelper adds a bounded,
+        // message-free structural stack summary below.
+        String exceptionType = throwable == null
+                ? "null"
+                : throwable.getClass().getName();
+        String fatalErrorMessage = MetaData.LOG_E_FATAL + ":" + AppListUtil.thisAppInfo
+                + " crashed; exception type:" + exceptionType;
         try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            LogHelper.e(MetaData.LOG_E_FATAL, fatalErrorMessage);
+            LogHelper.e(MetaData.LOG_E_FATAL, throwable);
+            LogHelper.writeNow();
+        } catch (RuntimeException ignored) {
+            // Never replace the original crash with a logging failure.
         }
-        //干掉当前的程序
-        android.os.Process.killProcess(android.os.Process.myPid());
+        if (previousHandler != null) {
+            previousHandler.uncaughtException(thread, throwable);
+        } else {
+            android.os.Process.killProcess(android.os.Process.myPid());
+        }
     }
 }

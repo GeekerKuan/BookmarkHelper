@@ -15,6 +15,7 @@ import pro.kisscat.www.bookmarkhelper.R;
  */
 
 public class ContextUtil {
+    private static Context applicationContext;
     private static final String split = "：";
     private static final String newLine = "\n";
 
@@ -39,6 +40,7 @@ public class ContextUtil {
 
 
     public static void init(Context context) {
+        applicationContext = context.getApplicationContext();
         if (readBookmarksError == null) {
             readBookmarksError = context.getResources().getString(R.string.readBookmarksError);
         }
@@ -84,6 +86,13 @@ public class ContextUtil {
         if (packageNameDesc == null) {
             packageNameDesc = context.getResources().getString(R.string.packageNameDesc);
         }
+    }
+
+    public static Context getApplicationContext() {
+        if (applicationContext == null) {
+            throw new IllegalStateException("ContextUtil is not initialized");
+        }
+        return applicationContext;
     }
 
     public static String buildNotSupportParseHomepageBookmarksMessage() {

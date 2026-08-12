@@ -67,7 +67,7 @@ public class ChromeBookmark {
         if (children != null) {
             String folderName = node.getName();
             String myFolderPath = addPath(folderPath, folderName);
-            LogHelper.v("bookmarkBar part;folderName:" + myFolderPath + ",size:" + children.size());
+            // Folder names are private browsing data; aggregate counts are logged by fetchAll().
             for (Node item : children) {
                 if (checkIsFolder(item)) {
                     parseNode(bookmarks, myFolderPath, item);

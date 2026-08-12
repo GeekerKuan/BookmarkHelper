@@ -58,12 +58,12 @@
 -keep class android..** {*;}
 
 # 保留support下的所有类及其内部类
--keep class android.support.** {*;}
+-keep class androidx.** {*;}
 
 # 保留继承的
--keep public class * extends android.support.v4.**
--keep public class * extends android.support.v7.**
--keep public class * extends android.support.annotation.**
+-keep public class * extends androidx.core.**
+-keep public class * extends androidx.appcompat.**
+-keep public class * extends androidx.annotation.**
 
 # 保留R下面的资源
 -keep class **.R$* {*;}
@@ -163,6 +163,13 @@
 #忽略警告
 -ignorewarning
 -dontwarn com.alibaba.fastjson.**
+
+# Modern libxposed entry point and its resource registration.
+-adaptresourcefilecontents META-INF/xposed/java_init.list
+-keep,allowoptimization,allowobfuscation public class * extends io.github.libxposed.api.XposedModule {
+    public <init>();
+}
+-dontwarn io.github.libxposed.annotation.**
 
 
 #-----------处理第三方依赖库---------
