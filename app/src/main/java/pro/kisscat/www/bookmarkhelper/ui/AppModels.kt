@@ -41,6 +41,7 @@ data class BookmarkHelperUiState(
     val blurEnabled: Boolean = true,
     val hapticsEnabled: Boolean = true,
     val predictiveBackEnabled: Boolean = true,
+    val predictiveBackMaxProgress: Float = 1f,
     val transitionsEnabled: Boolean = true,
     val floatingBarEnabled: Boolean = true,
     val pageScale: Float = 1f,

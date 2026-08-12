@@ -7,7 +7,6 @@ import android.os.Bundle
 import android.os.Build
 import android.view.HapticFeedbackConstants
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -73,12 +72,12 @@ class MainActivity : ComponentActivity() {
                 intermediateData = intermediateData,
             )
             if (state.selectedPage != MainPage.HOME) {
-                BackHandler {
+                BindInternalBack(state.predictiveBackEnabled, state.predictiveBackMaxProgress) {
                     performTick()
                     uiState = uiState.copy(selectedPage = MainPage.HOME)
                 }
             } else {
-                BindSystemBack(state.predictiveBackEnabled)
+                BindSystemBack(state.predictiveBackEnabled, state.predictiveBackMaxProgress)
             }
             val systemDensity = LocalDensity.current
             val scaledDensity = Density(
@@ -161,6 +160,7 @@ class MainActivity : ComponentActivity() {
             blurEnabled = UiPreferences.blurEnabled(this),
             hapticsEnabled = UiPreferences.hapticsEnabled(this),
             predictiveBackEnabled = UiPreferences.predictiveBackEnabled(this),
+            predictiveBackMaxProgress = UiPreferences.predictiveBackMaxProgress(this),
             transitionsEnabled = UiPreferences.transitionsEnabled(this),
             floatingBarEnabled = UiPreferences.floatingBarEnabled(this),
             pageScale = UiPreferences.pageScale(this),
@@ -178,6 +178,7 @@ class MainActivity : ComponentActivity() {
             blurEnabled = UiPreferences.blurEnabled(this),
             hapticsEnabled = UiPreferences.hapticsEnabled(this),
             predictiveBackEnabled = UiPreferences.predictiveBackEnabled(this),
+            predictiveBackMaxProgress = UiPreferences.predictiveBackMaxProgress(this),
             transitionsEnabled = UiPreferences.transitionsEnabled(this),
             floatingBarEnabled = UiPreferences.floatingBarEnabled(this),
             pageScale = UiPreferences.pageScale(this),
